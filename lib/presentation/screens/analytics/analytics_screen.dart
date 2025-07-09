@@ -29,42 +29,140 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.systemGroupedBackground,
-      appBar: _buildAppBar(),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _buildPeriodSelector(),
+                  const SizedBox(height: 20),
+                  _buildOverviewCards(),
+                  const SizedBox(height: 20),
+                  _buildPerformanceChart(),
+                  const SizedBox(height: 20),
+                  _buildPhaseAnalysis(),
+                  const SizedBox(height: 20),
+                  _buildTagAnalysis(),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.engagement.withOpacity(0.1),
+            AppColors.primary.withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.engagement.withOpacity(0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.separator.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
         children: [
-          _buildPeriodSelector(),
-          const SizedBox(height: 20),
-          _buildOverviewCards(),
-          const SizedBox(height: 20),
-          _buildPerformanceChart(),
-          const SizedBox(height: 20),
-          _buildPhaseAnalysis(),
-          const SizedBox(height: 20),
-          _buildTagAnalysis(),
-          const SizedBox(height: 20),
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.engagement, AppColors.primary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.engagement.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Icon(
+              CupertinoIcons.graph_circle_fill,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '分析',
+                  style: AppTypography.title1.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.engagement,
+                  ),
+                ),
+                Text(
+                  'データ分析レポート',
+                  style: AppTypography.body.copyWith(
+                    color: AppColors.secondaryLabel,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _buildExportButton(),
         ],
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: AppColors.systemGroupedBackground,
-      elevation: 0,
-      title: Text(
-        '分析レポート',
-        style: AppTypography.navigationTitle,
+  Widget _buildExportButton() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.engagement,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.engagement.withOpacity(0.3),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      centerTitle: true,
-      actions: [
-        IconButton(
-          icon: const Icon(CupertinoIcons.share),
-          onPressed: () {
-            _showExportDialog();
-          },
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: _showExportDialog,
+          child: const Padding(
+            padding: EdgeInsets.all(12),
+            child: Icon(
+              CupertinoIcons.share,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
         ),
-      ],
+      ),
     );
   }
 

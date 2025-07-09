@@ -20,35 +20,109 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.systemGroupedBackground,
-      appBar: _buildAppBar(),
-      body: ListView(
-        children: [
-          _buildProfileSection(),
-          const SizedBox(height: 20),
-          _buildNotificationSection(),
-          const SizedBox(height: 20),
-          _buildPreferencesSection(),
-          const SizedBox(height: 20),
-          _buildDataSection(),
-          const SizedBox(height: 20),
-          _buildSupportSection(),
-          const SizedBox(height: 20),
-          _buildAboutSection(),
-          const SizedBox(height: 40),
-        ],
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: ListView(
+                children: [
+                  _buildProfileSection(),
+                  const SizedBox(height: 20),
+                  _buildNotificationSection(),
+                  const SizedBox(height: 20),
+                  _buildPreferencesSection(),
+                  const SizedBox(height: 20),
+                  _buildDataSection(),
+                  const SizedBox(height: 20),
+                  _buildSupportSection(),
+                  const SizedBox(height: 20),
+                  _buildAboutSection(),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: AppColors.systemGroupedBackground,
-      elevation: 0,
-      title: Text(
-        '設定',
-        style: AppTypography.navigationTitle,
+  Widget _buildHeader() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.systemGray.withOpacity(0.1),
+            AppColors.systemGray4.withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.systemGray.withOpacity(0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.separator.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      centerTitle: true,
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.systemGray2, AppColors.systemGray4],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.systemGray.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Icon(
+              CupertinoIcons.settings_solid,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '設定',
+                  style: AppTypography.title1.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.systemGray,
+                  ),
+                ),
+                Text(
+                  'アプリ設定・管理',
+                  style: AppTypography.body.copyWith(
+                    color: AppColors.secondaryLabel,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

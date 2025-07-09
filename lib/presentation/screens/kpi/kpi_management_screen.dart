@@ -78,44 +78,155 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
     
     return Scaffold(
       backgroundColor: AppColors.systemGroupedBackground,
-      appBar: _buildAppBar(),
-      body: isWideScreen ? _buildWideScreenLayout() : _buildMobileLayout(),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: isWideScreen ? _buildWideScreenLayout() : _buildMobileLayout(),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    final isWideScreen = MediaQuery.of(context).size.width >= 768;
-    
-    return AppBar(
-      backgroundColor: AppColors.systemGroupedBackground,
-      elevation: 0,
-      title: isWideScreen 
-          ? null 
-          : Text(
-              'KPI・戦略管理',
-              style: AppTypography.navigationTitle,
-            ),
-      centerTitle: true,
-      leading: isWideScreen 
-          ? null 
-          : IconButton(
-              icon: const Icon(CupertinoIcons.line_horizontal_3),
-              onPressed: () {
-                Scaffold.of(context).openDrawer();
-              },
-            ),
-      actions: [
-        IconButton(
-          icon: const Icon(CupertinoIcons.plus_circle),
-          onPressed: () {
-            _showAddKpiDialog();
-          },
+  Widget _buildHeader() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.accentPurple.withOpacity(0.1),
+            AppColors.systemIndigo.withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        IconButton(
-          icon: const Icon(CupertinoIcons.gear),
-          onPressed: () {
-            _showSettingsDialog();
-          },
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.accentPurple.withOpacity(0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.separator.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.accentPurple, AppColors.systemIndigo],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.accentPurple.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Icon(
+              CupertinoIcons.chart_pie_fill,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'KPI管理',
+                  style: AppTypography.title1.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.accentPurple,
+                  ),
+                ),
+                Text(
+                  '長期戦略・目標管理',
+                  style: AppTypography.body.copyWith(
+                    color: AppColors.secondaryLabel,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _buildHeaderActions(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderActions() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.accentPurple.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: AppColors.accentPurple.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: _showSettingsDialog,
+              child: const Padding(
+                padding: EdgeInsets.all(10),
+                child: Icon(
+                  CupertinoIcons.gear,
+                  color: AppColors.accentPurple,
+                  size: 18,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.accentPurple,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.accentPurple.withOpacity(0.3),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: _showAddKpiDialog,
+              child: const Padding(
+                padding: EdgeInsets.all(10),
+                child: Icon(
+                  CupertinoIcons.plus,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+            ),
+          ),
         ),
       ],
     );

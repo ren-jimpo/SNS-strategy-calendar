@@ -78,36 +78,128 @@ class _RankingScreenState extends State<RankingScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.systemGroupedBackground,
-      appBar: _buildAppBar(),
-      body: Column(
-        children: [
-          _buildTabBar(),
-          _buildSummaryCard(),
-          Expanded(
-            child: _buildRankingList(),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            _buildTabBar(),
+            _buildSummaryCard(),
+            Expanded(
+              child: _buildRankingList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.accent.withOpacity(0.1),
+            AppColors.systemPink.withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.accent.withOpacity(0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.separator.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.accent, AppColors.systemPink],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.accent.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Icon(
+              CupertinoIcons.chart_bar_fill,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'ランキング',
+                  style: AppTypography.title1.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.accent,
+                  ),
+                ),
+                Text(
+                  'パフォーマンス順位',
+                  style: AppTypography.body.copyWith(
+                    color: AppColors.secondaryLabel,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _buildFilterButton(),
         ],
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: AppColors.systemGroupedBackground,
-      elevation: 0,
-      title: Text(
-        'パフォーマンスランキング',
-        style: AppTypography.navigationTitle,
+  Widget _buildFilterButton() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.accent,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.accent.withOpacity(0.3),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      centerTitle: true,
-      actions: [
-        IconButton(
-          icon: const Icon(CupertinoIcons.slider_horizontal_3),
-          onPressed: () {
-            _showFilterDialog();
-          },
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: _showFilterDialog,
+          child: const Padding(
+            padding: EdgeInsets.all(12),
+            child: Icon(
+              CupertinoIcons.slider_horizontal_3,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
         ),
-      ],
+      ),
     );
   }
 
