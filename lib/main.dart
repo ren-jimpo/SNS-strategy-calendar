@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'core/theme/app_theme.dart';
 import 'presentation/screens/auth/login_screen.dart';
@@ -29,7 +28,7 @@ class SNSStrategyCalendarApp extends StatelessWidget {
         // システムUIのオーバーレイスタイルを設定
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
-            textScaleFactor: 1.0, // フォントサイズの固定
+            textScaler: TextScaler.linear(1.0), // フォントサイズの固定
           ),
           child: child!,
         );

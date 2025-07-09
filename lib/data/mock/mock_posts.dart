@@ -1,4 +1,5 @@
 import '../models/post_model.dart';
+import '../models/sns_account_model.dart';
 
 /// モック投稿データ生成クラス
 class MockPosts {
@@ -8,31 +9,40 @@ class MockPosts {
   static List<PostModel> generateMockPosts() {
     final now = DateTime.now();
     final posts = <PostModel>[];
+    
+    // アカウントIDのリストを取得
+    final accountIds = AccountManager.accounts.map((account) => account.id).toList();
+    if (accountIds.isEmpty) {
+      // フォールバック用のアカウントID
+      accountIds.addAll(['instagram_1', 'x_1', 'youtube_1']);
+    }
 
     // 過去の投稿（30件）
     for (int i = 30; i > 0; i--) {
       final postDate = now.subtract(Duration(days: i));
-      posts.add(_createPastPost(i.toString(), postDate, i));
+      final accountId = accountIds[i % accountIds.length];
+      posts.add(_createPastPost(i.toString(), postDate, i, accountId));
     }
 
     // 今日の投稿（3件）
     posts.addAll([
-      _createTodayPost('today_1', now),
-      _createTodayPost('today_2', now.add(const Duration(hours: 2))),
-      _createTodayPost('today_3', now.add(const Duration(hours: 4))),
+      _createTodayPost('today_1', now, accountIds[0]),
+      _createTodayPost('today_2', now.add(const Duration(hours: 2)), accountIds[1 % accountIds.length]),
+      _createTodayPost('today_3', now.add(const Duration(hours: 4)), accountIds[2 % accountIds.length]),
     ]);
 
     // 未来の投稿（20件）
     for (int i = 1; i <= 20; i++) {
       final postDate = now.add(Duration(days: i));
-      posts.add(_createFuturePost('future_$i', postDate, i));
+      final accountId = accountIds[(i - 1) % accountIds.length];
+      posts.add(_createFuturePost('future_$i', postDate, i, accountId));
     }
 
     return posts;
   }
 
   /// 過去の投稿を生成
-  static PostModel _createPastPost(String id, DateTime date, int daysAgo) {
+  static PostModel _createPastPost(String id, DateTime date, int daysAgo, String accountId) {
     final performance = _generatePerformance(daysAgo);
     final isRecent = daysAgo <= 7;
     
@@ -50,11 +60,12 @@ class MockPosts {
       createdAt: date.subtract(const Duration(days: 1)),
       updatedAt: DateTime.now(),
       isPublished: true,
+      accountId: accountId,
     );
   }
 
   /// 今日の投稿を生成
-  static PostModel _createTodayPost(String id, DateTime date) {
+  static PostModel _createTodayPost(String id, DateTime date, String accountId) {
     return PostModel(
       id: id,
       content: _getTodayPostContent(id),
@@ -69,11 +80,12 @@ class MockPosts {
       createdAt: date.subtract(const Duration(hours: 2)),
       updatedAt: DateTime.now(),
       isPublished: true,
+      accountId: accountId,
     );
   }
 
   /// 未来の投稿を生成
-  static PostModel _createFuturePost(String id, DateTime date, int daysFromNow) {
+  static PostModel _createFuturePost(String id, DateTime date, int daysFromNow, String accountId) {
     return PostModel(
       id: id,
       content: _getFuturePostContent(daysFromNow),
@@ -88,6 +100,7 @@ class MockPosts {
       createdAt: DateTime.now().subtract(Duration(hours: daysFromNow)),
       updatedAt: DateTime.now(),
       isPublished: false,
+      accountId: accountId,
     );
   }
 

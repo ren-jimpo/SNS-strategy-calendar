@@ -4,7 +4,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/post_model.dart';
 import '../../../data/mock/mock_posts.dart';
-import '../../widgets/post_card.dart';
 
 class RankingScreen extends StatefulWidget {
   const RankingScreen({super.key});
@@ -306,8 +305,9 @@ class _RankingScreenState extends State<RankingScreen>
     Color rankColor = _getRankColor(rank);
     IconData rankIcon = CupertinoIcons.number;
 
-    if (rank == 1) rankIcon = CupertinoIcons.star_fill;
-    else if (rank == 2) rankIcon = CupertinoIcons.circle_fill;
+    if (rank == 1) {
+      rankIcon = CupertinoIcons.star_fill;
+    } else if (rank == 2) rankIcon = CupertinoIcons.circle_fill;
     else if (rank == 3) rankIcon = CupertinoIcons.star;
 
     return Container(

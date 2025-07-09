@@ -5,9 +5,11 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/post_model.dart';
+import '../../../data/models/sns_account_model.dart';
 import '../../../data/mock/mock_posts.dart';
 import '../../widgets/post_card.dart';
-import '../post/post_detail_screen.dart';
+import '../../widgets/post_create_modal.dart';
+import '../../widgets/search_filter_modal.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -22,28 +24,61 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime? _selectedDay;
   late List<PostModel> _posts;
   List<PostModel> _selectedDayPosts = [];
+  List<PostModel> _filteredPosts = [];
+  SearchFilterConfig _currentFilter = const SearchFilterConfig();
+  
+  // アカウント管理
+  List<SNSAccount> _accounts = [];
+  SNSAccount? _selectedAccount;
 
   @override
   void initState() {
     super.initState();
-    _posts = MockPosts.generateMockPosts();
+    _initializeData();
     _selectedDay = DateTime.now();
+    _applyFilters();
     _updateSelectedDayPosts();
+  }
+
+  void _initializeData() {
+    // モックアカウントを生成
+    AccountManager.generateMockAccounts();
+    _accounts = AccountManager.activeAccounts;
+    _selectedAccount = AccountManager.selectedAccount;
+    
+    // モック投稿を生成（アカウント情報付き）
+    _posts = MockPosts.generateMockPosts();
+  }
+
+  void _applyFilters() {
+    setState(() {
+      _filteredPosts = _posts.where((post) {
+        // 検索・フィルター条件をチェック
+        if (!_currentFilter.matchesPost(post)) return false;
+        
+        // アカウントフィルターをチェック
+        if (_selectedAccount != null) {
+          return post.accountId == _selectedAccount!.id;
+        }
+        
+        return true;
+      }).toList();
+    });
   }
 
   void _updateSelectedDayPosts() {
     if (_selectedDay == null) return;
     
     setState(() {
-      _selectedDayPosts = _posts.where((post) {
-        return isSameDay(post.scheduledDate, _selectedDay);
+      _selectedDayPosts = _filteredPosts.where((post) {
+        return _isSameDay(post.scheduledDate, _selectedDay!);
       }).toList();
     });
   }
 
   List<PostModel> _getEventsForDay(DateTime day) {
-    return _posts.where((post) {
-      return isSameDay(post.scheduledDate, day);
+    return _filteredPosts.where((post) {
+      return _isSameDay(post.scheduledDate, day);
     }).toList();
   }
 
@@ -54,53 +89,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.systemGroupedBackground,
-      appBar: _buildAppBar(),
-      body: isWideScreen
-          ? _buildWideScreenLayout()
-          : _buildMobileLayout(),
+      body: SafeArea(
+        child: isWideScreen
+            ? _buildWideScreenLayout()
+            : _buildMobileLayout(),
+      ),
       floatingActionButton: _buildFloatingActionButton(),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    final isWideScreen = MediaQuery.of(context).size.width >= 768;
-    
-    return AppBar(
-      backgroundColor: AppColors.systemGroupedBackground,
-      elevation: 0,
-      title: isWideScreen 
-          ? null 
-          : Text(
-              'SNS投稿カレンダー',
-              style: AppTypography.navigationTitle,
-            ),
-      centerTitle: true,
-      leading: isWideScreen 
-          ? null 
-          : IconButton(
-              icon: const Icon(CupertinoIcons.line_horizontal_3),
-              onPressed: () {
-                Scaffold.of(context).openDrawer();
-              },
-            ),
-      actions: [
-        IconButton(
-          icon: const Icon(CupertinoIcons.search),
-          onPressed: () {
-            // 検索機能
-            _showSearchDialog();
-          },
-        ),
-        IconButton(
-          icon: const Icon(CupertinoIcons.line_horizontal_3_decrease),
-          onPressed: () {
-            // フィルター機能
-            _showFilterDialog();
-          },
-        ),
-      ],
-    );
-  }
+
 
   Widget _buildWideScreenLayout() {
     return Row(
@@ -112,9 +110,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
             children: [
               // カレンダー部分
               Expanded(
-                flex: 3,
+                flex: 4,
                 child: Container(
-                  margin: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.fromLTRB(16, 16, 8, 16),
                   decoration: BoxDecoration(
                     color: AppColors.secondarySystemGroupedBackground,
                     borderRadius: BorderRadius.circular(16),
@@ -136,7 +134,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
               // 統計・クイックアクション部分
               Expanded(
-                flex: 2,
+                flex: 1,
                 child: _buildCalendarSidebar(),
               ),
             ],
@@ -146,7 +144,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
         Expanded(
           flex: 2,
           child: Container(
-            margin: const EdgeInsets.only(top: 16, right: 16, bottom: 16),
+            margin: const EdgeInsets.fromLTRB(8, 16, 16, 16),
+            decoration: BoxDecoration(
+              color: AppColors.secondarySystemGroupedBackground,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.separator.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: Column(
               children: [
                 _buildSelectedDaySection(),
@@ -162,10 +171,51 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget _buildMobileLayout() {
     return Column(
       children: [
-        _buildCalendar(),
-        _buildSelectedDaySection(),
         Expanded(
-          child: _buildPostsList(),
+          flex: 3,
+          child: Container(
+            margin: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.secondarySystemGroupedBackground,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.separator.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                _buildCalendarHeader(),
+                Expanded(child: _buildCalendar()),
+              ],
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 2,
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            decoration: BoxDecoration(
+              color: AppColors.secondarySystemGroupedBackground,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.separator.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                _buildSelectedDaySection(),
+                Expanded(child: _buildPostsList()),
+              ],
+            ),
+          ),
         ),
       ],
     );
@@ -197,9 +247,92 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           ),
           const Spacer(),
+          _buildSearchAndFilterButtons(),
+          const SizedBox(width: 12),
           _buildCalendarControls(),
         ],
       ),
+    );
+  }
+
+  Widget _buildSearchAndFilterButtons() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // 検索ボタン
+        Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: IconButton(
+                icon: Icon(
+                  CupertinoIcons.search,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+                onPressed: () {
+                  _showSearchDialog();
+                },
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                padding: const EdgeInsets.all(8),
+              ),
+            ),
+            if (_currentFilter.searchText.isNotEmpty)
+              Positioned(
+                right: 6,
+                top: 6,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(width: 8),
+        // フィルターボタン
+        Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.engagement.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: IconButton(
+                icon: Icon(
+                  CupertinoIcons.line_horizontal_3_decrease,
+                  color: AppColors.engagement,
+                  size: 20,
+                ),
+                onPressed: () {
+                  _showFilterDialog();
+                },
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                padding: const EdgeInsets.all(8),
+              ),
+            ),
+            if (_currentFilter.hasFilters && _currentFilter.searchText.isEmpty)
+              Positioned(
+                right: 6,
+                top: 6,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: AppColors.engagement,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -234,44 +367,27 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildCalendar() {
-    return Container(
-      margin: MediaQuery.of(context).size.width >= 768 
-          ? EdgeInsets.zero 
-          : const EdgeInsets.all(16),
-      decoration: MediaQuery.of(context).size.width >= 768 
-          ? null
-          : BoxDecoration(
-              color: AppColors.secondarySystemGroupedBackground,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.separator.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: TableCalendar<PostModel>(
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: TableCalendar<PostModel>(
           firstDay: DateTime.utc(2020, 1, 1),
           lastDay: DateTime.utc(2030, 12, 31),
           focusedDay: _focusedDay,
           calendarFormat: _calendarFormat,
           eventLoader: _getEventsForDay,
-          startingDayOfWeek: StartingDayOfWeek.monday,
-          selectedDayPredicate: (day) {
-            return isSameDay(_selectedDay, day);
-          },
-          onDaySelected: (selectedDay, focusedDay) {
-            if (!isSameDay(_selectedDay, selectedDay)) {
-              setState(() {
-                _selectedDay = selectedDay;
-                _focusedDay = focusedDay;
-              });
-              _updateSelectedDayPosts();
-            }
-          },
+                  startingDayOfWeek: StartingDayOfWeek.monday,
+        selectedDayPredicate: (day) {
+          return _selectedDay != null && _isSameDay(_selectedDay!, day);
+        },
+        onDaySelected: (selectedDay, focusedDay) {
+          if (_selectedDay == null || !_isSameDay(_selectedDay!, selectedDay)) {
+            setState(() {
+              _selectedDay = selectedDay;
+              _focusedDay = focusedDay;
+            });
+            _updateSelectedDayPosts();
+          }
+        },
           onFormatChanged: (format) {
             if (_calendarFormat != format) {
               setState(() {
@@ -348,8 +464,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             },
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildSelectedDaySection() {
@@ -358,32 +473,43 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final dateString = DateFormat('M月d日(E)', 'ja').format(_selectedDay!);
     
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.secondarySystemGroupedBackground,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.primary.withOpacity(0.05),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                dateString,
-                style: AppTypography.headline,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    dateString,
+                    style: AppTypography.title2.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    '${_selectedDayPosts.length}件の投稿',
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.secondaryLabel,
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                '${_selectedDayPosts.length}件の投稿',
-                style: AppTypography.footnote.copyWith(
-                  color: AppColors.secondaryLabel,
-                ),
-              ),
+              if (_selectedDayPosts.isNotEmpty)
+                _buildQuickStats(),
             ],
           ),
-          if (_selectedDayPosts.isNotEmpty)
-            _buildQuickStats(),
+          const SizedBox(height: 16),
+          _buildAccountFilter(),
         ],
       ),
     );
@@ -440,6 +566,87 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAccountFilter() {
+    return Row(
+      children: [
+        Text(
+          'アカウント:',
+          style: AppTypography.caption1.copyWith(
+            color: AppColors.secondaryLabel,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildAccountFilterChip(
+                  null,
+                  'すべて',
+                  AppColors.systemGray,
+                ),
+                const SizedBox(width: 8),
+                ..._accounts.map((account) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: _buildAccountFilterChip(
+                      account,
+                      account.displayName,
+                      account.platformColor,
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAccountFilterChip(SNSAccount? account, String label, Color color) {
+    final isSelected = _selectedAccount == account;
+    
+    return GestureDetector(
+      onTap: () {
+        _onAccountChanged(account);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.2) : color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? color : color.withOpacity(0.3),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (account != null) ...[
+              Icon(
+                account.platformIcon,
+                size: 14,
+                color: isSelected ? color : color.withOpacity(0.7),
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: AppTypography.caption1.copyWith(
+                color: isSelected ? color : color.withOpacity(0.7),
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -501,52 +708,60 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   void _navigateToPostDetail(PostModel? post) {
-    Navigator.push(
-      context,
-      CupertinoPageRoute(
-        builder: (context) => PostDetailScreen(
-          post: post,
-          selectedDate: _selectedDay ?? DateTime.now(),
-        ),
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => PostCreateModal(
+        post: post,
+        selectedDate: _selectedDay ?? DateTime.now(),
+        onSaved: (savedPost) {
+          setState(() {
+            if (post != null) {
+              // 既存投稿の更新
+              final index = _posts.indexWhere((p) => p.id == post.id);
+              if (index != -1) {
+                _posts[index] = savedPost;
+              }
+            } else {
+              // 新規投稿の追加
+              _posts.add(savedPost);
+            }
+            _applyFilters();
+            _updateSelectedDayPosts();
+          });
+        },
       ),
     );
   }
 
   void _showSearchDialog() {
-    showCupertinoDialog(
-      context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: const Text('検索'),
-        content: const Text('検索機能は準備中です。'),
-        actions: [
-          CupertinoDialogAction(
-            child: const Text('OK'),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
-      ),
-    );
+    _showSearchFilterModal();
   }
 
   void _showFilterDialog() {
-    showCupertinoDialog(
+    _showSearchFilterModal();
+  }
+
+  void _showSearchFilterModal() {
+    showDialog(
       context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: const Text('フィルター'),
-        content: const Text('フィルター機能は準備中です。'),
-        actions: [
-          CupertinoDialogAction(
-            child: const Text('OK'),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
+      barrierDismissible: false,
+      builder: (context) => SearchFilterModal(
+        initialConfig: _currentFilter,
+        onApply: (config) {
+          setState(() {
+            _currentFilter = config;
+          });
+          _applyFilters();
+          _updateSelectedDayPosts();
+        },
       ),
     );
   }
 
   Widget _buildCalendarSidebar() {
     return Container(
-      margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+      margin: const EdgeInsets.fromLTRB(16, 0, 8, 16),
       child: Row(
         children: [
           // 左側：今日の統計
@@ -565,8 +780,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Widget _buildDailyStats() {
     final today = DateTime.now();
-    final todayPosts = _posts.where((post) {
-      return isSameDay(post.scheduledDate, today);
+    final todayPosts = _filteredPosts.where((post) {
+      return _isSameDay(post.scheduledDate, today);
     }).toList();
     
     final publishedToday = todayPosts.where((post) => post.isPublished).length;
@@ -575,13 +790,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
     // 今週の投稿数
     final weekStart = today.subtract(Duration(days: today.weekday - 1));
     final weekEnd = weekStart.add(const Duration(days: 6));
-    final weekPosts = _posts.where((post) {
+    final weekPosts = _filteredPosts.where((post) {
       return post.scheduledDate.isAfter(weekStart.subtract(const Duration(days: 1))) &&
              post.scheduledDate.isBefore(weekEnd.add(const Duration(days: 1)));
     }).length;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -603,30 +818,30 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
                   color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(
                       color: AppColors.primary.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
                 child: const Icon(
                   CupertinoIcons.chart_bar_circle_fill,
                   color: Colors.white,
-                  size: 18,
+                  size: 16,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   '今日の統計',
-                  style: AppTypography.headline.copyWith(
+                  style: AppTypography.subhead.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w700,
                   ),
@@ -634,11 +849,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildStatItem('投稿予定', '$pendingToday件', CupertinoIcons.clock, AppColors.systemOrange),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           _buildStatItem('投稿完了', '$publishedToday件', CupertinoIcons.checkmark_circle_fill, AppColors.systemGreen),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           _buildStatItem('今週の投稿', '$weekPosts件', CupertinoIcons.calendar_badge_plus, AppColors.engagement),
         ],
       ),
@@ -675,7 +890,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Widget _buildQuickActions() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -697,30 +912,30 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
                   color: AppColors.accent,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(
                       color: AppColors.accent.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
                 child: const Icon(
                   CupertinoIcons.bolt_fill,
                   color: Colors.white,
-                  size: 18,
+                  size: 16,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'クイックアクション',
-                  style: AppTypography.headline.copyWith(
+                  style: AppTypography.subhead.copyWith(
                     color: AppColors.accent,
                     fontWeight: FontWeight.w700,
                   ),
@@ -728,21 +943,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildQuickActionButton(
             '新規投稿',
             CupertinoIcons.plus_circle_fill,
             AppColors.primary,
             () => _showCreatePostDialog(),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           _buildQuickActionButton(
             'テンプレート',
             CupertinoIcons.doc_text_fill,
             AppColors.systemOrange,
             () => _showTemplateDialog(),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           _buildQuickActionButton(
             '実績入力',
             CupertinoIcons.chart_bar_square_fill,
@@ -796,19 +1011,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   void _showCreatePostDialog() {
-    showCupertinoDialog(
-      context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: const Text('新規投稿作成'),
-        content: const Text('新規投稿作成機能は投稿詳細画面で利用できます。'),
-        actions: [
-          CupertinoDialogAction(
-            child: const Text('OK'),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
-      ),
-    );
+    _navigateToPostDetail(null);
   }
 
   void _showTemplateDialog() {
@@ -841,5 +1044,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ],
       ),
     );
+  }
+
+  void _onAccountChanged(SNSAccount? account) {
+    setState(() {
+      _selectedAccount = account;
+      AccountManager.selectAccount(account?.id);
+    });
+    _applyFilters();
+    _updateSelectedDayPosts();
+  }
+
+
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 } 

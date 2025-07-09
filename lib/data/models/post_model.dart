@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart';
-
+ 
 /// 投稿フェーズ
 enum PostPhase {
   planning('企画'),
@@ -138,6 +137,7 @@ class PostModel {
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isPublished;
+  final String? accountId; // 関連するSNSアカウントID
 
   const PostModel({
     required this.id,
@@ -153,6 +153,7 @@ class PostModel {
     required this.createdAt,
     required this.updatedAt,
     this.isPublished = false,
+    this.accountId,
   });
 
   /// 投稿後の経過日数
@@ -203,6 +204,7 @@ class PostModel {
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isPublished,
+    String? accountId,
   }) {
     return PostModel(
       id: id ?? this.id,
@@ -218,6 +220,7 @@ class PostModel {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isPublished: isPublished ?? this.isPublished,
+      accountId: accountId ?? this.accountId,
     );
   }
 } 

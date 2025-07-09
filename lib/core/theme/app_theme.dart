@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'app_colors.dart';
 import 'app_typography.dart';
 
@@ -24,8 +23,6 @@ class AppTheme {
       onSecondary: Colors.white,
       error: AppColors.error,
       onError: Colors.white,
-      background: AppColors.systemGroupedBackground,
-      onBackground: AppColors.label,
       surface: AppColors.secondarySystemGroupedBackground,
       onSurface: AppColors.label,
     ),
@@ -155,8 +152,6 @@ class AppTheme {
       onSecondary: Colors.white,
       error: AppColors.error,
       onError: Colors.white,
-      background: AppColors.systemGroupedBackgroundDark,
-      onBackground: AppColors.labelDark,
       surface: AppColors.secondarySystemGroupedBackgroundDark,
       onSurface: AppColors.labelDark,
     ),

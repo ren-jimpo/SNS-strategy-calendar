@@ -7,6 +7,7 @@ import '../ranking/ranking_screen.dart';
 import '../analytics/analytics_screen.dart';
 import '../settings/settings_screen.dart';
 import '../kpi/kpi_management_screen.dart';
+import '../account/account_management_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -23,6 +24,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
   final List<Widget> _screens = [
     const CalendarScreen(),
+    const AccountManagementScreen(),
     const KpiManagementScreen(),
     const RankingScreen(),
     const AnalyticsScreen(),
@@ -37,6 +39,14 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       subtitle: '投稿スケジュール管理',
       color: AppColors.primary,
       gradient: AppColors.engagementGradient,
+    ),
+    NavigationItem(
+      icon: CupertinoIcons.person_2,
+      activeIcon: CupertinoIcons.person_2_fill,
+      label: 'アカウント管理',
+      subtitle: 'SNSアカウント管理',
+      color: AppColors.systemBlue,
+      gradient: [AppColors.systemBlue, AppColors.systemIndigo],
     ),
     NavigationItem(
       icon: CupertinoIcons.chart_pie,
