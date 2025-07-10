@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/post_model.dart';
+import '../../../data/models/kpi_model.dart';
+import '../../widgets/kpi_edit_modal.dart';
+import '../../widgets/phase_edit_modal.dart';
+import '../../providers/kpi_data_provider.dart';
 
 class KpiManagementScreen extends StatefulWidget {
   const KpiManagementScreen({super.key});
@@ -16,13 +21,8 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
   late TabController _tabController;
   PostPhase _selectedPhase = PostPhase.planning;
 
-  // モックKGI目標データ
-  final Map<String, dynamic> _kgiTargets = {
-    'monthly_followers': {'target': 10000, 'current': 7650, 'label': '月次フォロワー増加'},
-    'engagement_rate': {'target': 5.5, 'current': 4.2, 'label': '平均エンゲージメント率(%)'},
-    'brand_awareness': {'target': 80, 'current': 65, 'label': 'ブランド認知度(%)'},
-    'conversion_rate': {'target': 3.0, 'current': 2.4, 'label': 'コンバージョン率(%)'},
-  };
+  // ローディング状態
+  bool _isLoading = true;
 
   // フェーズ別KPIデータ
   final Map<PostPhase, Map<String, dynamic>> _phaseKpis = {
@@ -64,6 +64,27 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
         });
       }
     });
+    
+    // Supabaseからデータを読み込み
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
+  }
+
+  Future<void> _loadData() async {
+    final kpiProvider = Provider.of<KpiDataProvider>(context, listen: false);
+    
+    setState(() {
+      _isLoading = true;
+    });
+    
+    await kpiProvider.loadData();
+    
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -78,20 +99,67 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
     
     return Scaffold(
       backgroundColor: AppColors.systemGroupedBackground,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: isWideScreen ? _buildWideScreenLayout() : _buildMobileLayout(),
+      body: Consumer<KpiDataProvider>(
+        builder: (context, kpiProvider, child) {
+          if (_isLoading || kpiProvider.isLoading) {
+            return const Center(
+              child: CupertinoActivityIndicator(radius: 16),
+            );
+          }
+          
+          if (kpiProvider.error != null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    CupertinoIcons.exclamationmark_triangle,
+                    size: 64,
+                    color: AppColors.systemRed,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'エラーが発生しました',
+                    style: AppTypography.title2.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    kpiProvider.error!,
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.secondaryLabel,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  CupertinoButton.filled(
+                    onPressed: _loadData,
+                    child: const Text('再試行'),
+                  ),
+                ],
+              ),
+            );
+          }
+          
+          return SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(kpiProvider),
+                Expanded(
+                  child: isWideScreen 
+                    ? _buildWideScreenLayout(kpiProvider) 
+                    : _buildMobileLayout(kpiProvider),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(KpiDataProvider kpiProvider) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       padding: const EdgeInsets.all(20),
@@ -187,7 +255,7 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(10),
-              onTap: _showSettingsDialog,
+              onTap: _showManagementMenu,
               child: const Padding(
                 padding: EdgeInsets.all(10),
                 child: Icon(
@@ -216,7 +284,7 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(10),
-              onTap: _showAddKpiDialog,
+              onTap: _showAddMenu,
               child: const Padding(
                 padding: EdgeInsets.all(10),
                 child: Icon(
@@ -232,7 +300,7 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
     );
   }
 
-  Widget _buildWideScreenLayout() {
+  Widget _buildWideScreenLayout(KpiDataProvider kpiProvider) {
     return Row(
       children: [
         // 左側：KGI + フェーズタブ
@@ -242,7 +310,7 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                _buildKgiOverview(),
+                _buildKgiOverview(kpiProvider),
                 const SizedBox(height: 16),
                 _buildPhaseTabSelector(),
                 const SizedBox(height: 16),
@@ -272,12 +340,12 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
     );
   }
 
-  Widget _buildMobileLayout() {
+  Widget _buildMobileLayout(KpiDataProvider kpiProvider) {
     return Column(
       children: [
         Flexible(
           flex: 0,
-          child: _buildKgiOverview(),
+          child: _buildKgiOverview(kpiProvider),
         ),
         Flexible(
           flex: 0,
@@ -293,7 +361,7 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
     );
   }
 
-  Widget _buildKgiOverview() {
+  Widget _buildKgiOverview(KpiDataProvider kpiProvider) {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
@@ -372,7 +440,7 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${_calculateOverallProgress().toStringAsFixed(0)}%',
+                  '${_calculateOverallProgress(kpiProvider).toStringAsFixed(0)}%',
                   style: AppTypography.subhead.copyWith(
                     color: AppColors.systemGreen,
                     fontWeight: FontWeight.w700,
@@ -393,10 +461,10 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
                   mainAxisSpacing: 12,
                   childAspectRatio: 1.5,
                 ),
-                itemCount: _kgiTargets.length,
+                itemCount: kpiProvider.kgiList.length,
                 itemBuilder: (context, index) {
-                  final entry = _kgiTargets.entries.elementAt(index);
-                  return _buildKgiCard(entry.key, entry.value);
+                  final kgi = kpiProvider.kgiList[index];
+                  return _buildKgiCard(kgi);
                 },
               );
             },
@@ -406,8 +474,8 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
     );
   }
 
-  Widget _buildKgiCard(String key, Map<String, dynamic> data) {
-    final progress = (data['current'] / data['target'] * 100).clamp(0, 100);
+  Widget _buildKgiCard(KpiModel kgi) {
+    final progress = kgi.progress;
     
     return Container(
       padding: const EdgeInsets.all(12),
@@ -426,7 +494,7 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${data['current']}${_getUnit(key)}',
+                '${kgi.currentValue.toStringAsFixed(kgi.currentValue.truncateToDouble() == kgi.currentValue ? 0 : 1)}${kgi.unit}',
                 style: AppTypography.headline.copyWith(
                   color: _getProgressColor(progress),
                   fontWeight: FontWeight.w700,
@@ -443,7 +511,7 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
           ),
           const SizedBox(height: 4),
           Text(
-            data['label'],
+            kgi.name,
             style: AppTypography.caption1.copyWith(
               color: AppColors.secondaryLabel,
             ),
@@ -882,16 +950,16 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
   }
 
   // Helper Methods
-  double _calculateOverallProgress() {
-    double totalProgress = 0;
-    int count = 0;
+  double _calculateOverallProgress(KpiDataProvider kpiProvider) {
+    final kgis = kpiProvider.kgiList;
+    if (kgis.isEmpty) return 0;
     
-    for (final kgi in _kgiTargets.values) {
-      totalProgress += (kgi['current'] / kgi['target'] * 100).clamp(0, 100);
-      count++;
+    double totalProgress = 0;
+    for (final kgi in kgis) {
+      totalProgress += kgi.progress;
     }
     
-    return count > 0 ? totalProgress / count : 0;
+    return totalProgress / kgis.length;
   }
 
   double _calculatePhaseProgress(Map<String, dynamic> phaseData) {
@@ -917,18 +985,7 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
     return AppColors.systemRed;
   }
 
-  String _getUnit(String key) {
-    switch (key) {
-      case 'monthly_followers':
-        return '';
-      case 'engagement_rate':
-      case 'brand_awareness':
-      case 'conversion_rate':
-        return '%';
-      default:
-        return '';
-    }
-  }
+  // _getUnitメソッドは削除（KpiModelのunitプロパティを使用）
 
   String _getKpiUnit(String key) {
     if (key.contains('rate') || key.contains('completion') || key.contains('accuracy') || 
@@ -1021,36 +1078,354 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
     }
   }
 
-  void _showAddKpiDialog() {
-    // KPI追加ダイアログの実装
-    showDialog(
+  void _showAddMenu() {
+    showCupertinoModalPopup(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('新しいKPIを追加'),
-        content: const Text('KPI追加機能は今後実装予定です。'),
+      builder: (context) => CupertinoActionSheet(
+        title: const Text('追加'),
+        message: const Text('何を追加しますか？'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('閉じる'),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _showAddKpiDialog();
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(CupertinoIcons.chart_bar_fill, size: 20, color: AppColors.systemBlue),
+                const SizedBox(width: 8),
+                Text('KPI を追加'),
+              ],
+            ),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _showAddKgiDialog();
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(CupertinoIcons.star_fill, size: 20, color: AppColors.accentPurple),
+                const SizedBox(width: 8),
+                Text('KGI を追加'),
+              ],
+            ),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _showAddPhaseDialog();
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(CupertinoIcons.layers_alt, size: 20, color: AppColors.systemPurple),
+                const SizedBox(width: 8),
+                Text('フェーズを追加'),
+              ],
+            ),
           ),
         ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('キャンセル'),
+        ),
       ),
     );
   }
 
-  void _showSettingsDialog() {
-    // 設定ダイアログの実装
-    showDialog(
+  void _showAddKpiDialog() {
+    final kpiProvider = Provider.of<KpiDataProvider>(context, listen: false);
+    
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('KPI設定'),
-        content: const Text('KPI設定機能は今後実装予定です。'),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => KpiEditModal(phases: kpiProvider.phases),
+    ).then((result) {
+      if (result == true) {
+        // データはプロバイダーで自動更新される
+      }
+    });
+  }
+
+  void _showAddKgiDialog() {
+    final kpiProvider = Provider.of<KpiDataProvider>(context, listen: false);
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => KpiEditModal(
+        phases: kpiProvider.phases,
+        initialType: KpiType.kgi,
+      ),
+    ).then((result) {
+      if (result == true) {
+        // データはプロバイダーで自動更新される
+      }
+    });
+  }
+
+  void _showEditKpiDialog(KpiModel kpi) {
+    final kpiProvider = Provider.of<KpiDataProvider>(context, listen: false);
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => KpiEditModal(kpi: kpi, phases: kpiProvider.phases),
+    ).then((result) {
+      if (result == true) {
+        // データはプロバイダーで自動更新される
+      }
+    });
+  }
+
+  void _showManagementMenu() {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: const Text('管理'),
+        message: const Text('管理したい項目を選択してください'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('閉じる'),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _showKpiListDialog();
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(CupertinoIcons.list_bullet, size: 20, color: AppColors.systemBlue),
+                const SizedBox(width: 8),
+                Text('KPI/KGI一覧'),
+              ],
+            ),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _showPhaseManagementDialog();
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(CupertinoIcons.layers_alt, size: 20, color: AppColors.systemPurple),
+                const SizedBox(width: 8),
+                Text('フェーズ管理'),
+              ],
+            ),
           ),
         ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('キャンセル'),
+        ),
+      ),
+    );
+  }
+
+  void _showPhaseManagementDialog() {
+    final kpiProvider = Provider.of<KpiDataProvider>(context, listen: false);
+    
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: const Text('フェーズ管理'),
+        message: const Text('フェーズの管理を行います'),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _showAddPhaseDialog();
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(CupertinoIcons.plus_circle, size: 20),
+                const SizedBox(width: 8),
+                Text('新しいフェーズを追加'),
+              ],
+            ),
+          ),
+          ...kpiProvider.phases.map((phase) => CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _showEditPhaseDialog(phase);
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(CupertinoIcons.pencil, size: 20),
+                const SizedBox(width: 8),
+                Text('編集: ${phase.name}'),
+              ],
+            ),
+          )),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('キャンセル'),
+        ),
+      ),
+    );
+  }
+
+  void _showAddPhaseDialog() {
+    final kpiProvider = Provider.of<KpiDataProvider>(context, listen: false);
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => PhaseEditModal(existingPhases: kpiProvider.phases),
+    ).then((result) {
+      if (result == true) {
+        // データはプロバイダーで自動更新される
+      }
+    });
+  }
+
+  void _showEditPhaseDialog(PhaseModel phase) {
+    final kpiProvider = Provider.of<KpiDataProvider>(context, listen: false);
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => PhaseEditModal(phase: phase, existingPhases: kpiProvider.phases),
+    ).then((result) {
+      if (result == true) {
+        // データはプロバイダーで自動更新される
+      }
+    });
+  }
+
+  void _showKpiListDialog() {
+    final kpiProvider = Provider.of<KpiDataProvider>(context, listen: false);
+    
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: AppColors.systemGroupedBackground,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.systemBackground,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                border: Border(
+                  bottom: BorderSide(
+                    color: AppColors.separator.withOpacity(0.3),
+                    width: 0.5,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'KPI/KGI一覧',
+                      style: AppTypography.title2.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Icon(
+                      CupertinoIcons.xmark_circle_fill,
+                      color: AppColors.systemGray,
+                      size: 28,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: kpiProvider.kpis.length,
+                itemBuilder: (context, index) {
+                  final kpi = kpiProvider.kpis[index];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.systemBackground,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.separator.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: ListTile(
+                      leading: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: kpi.type == KpiType.kgi 
+                            ? AppColors.accentPurple 
+                            : AppColors.systemBlue,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          kpi.type == KpiType.kgi 
+                            ? CupertinoIcons.star_fill 
+                            : CupertinoIcons.chart_bar_fill,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      title: Text(
+                        kpi.name,
+                        style: AppTypography.headline.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${kpi.currentValue.toStringAsFixed(1)}${kpi.unit} / ${kpi.targetValue.toStringAsFixed(1)}${kpi.unit}',
+                            style: AppTypography.body,
+                          ),
+                          LinearProgressIndicator(
+                            value: kpi.progress / 100,
+                            backgroundColor: AppColors.systemGray5,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              kpi.isOnTrack ? AppColors.systemGreen : 
+                              kpi.needsAttention ? AppColors.systemRed : AppColors.systemOrange,
+                            ),
+                          ),
+                        ],
+                      ),
+                      trailing: CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _showEditKpiDialog(kpi);
+                        },
+                        child: Icon(
+                          CupertinoIcons.pencil,
+                          color: AppColors.systemBlue,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

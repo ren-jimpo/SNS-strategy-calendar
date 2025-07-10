@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../data/models/post_model.dart';
+import '../../data/models/sns_post.dart';
 
 class SearchFilterModal extends StatefulWidget {
   final SearchFilterConfig? initialConfig;
@@ -881,6 +882,43 @@ class SearchFilterConfig {
       return false;
     }
     if (unpublishedOnly && post.isPublished) {
+      return false;
+    }
+
+    return true;
+  }
+
+  // SnsPostモデル用のmatchesPostメソッド
+  bool matchesSnsPost(SnsPost post) {
+    // テキスト検索
+    if (searchText.isNotEmpty) {
+      if (!post.content.toLowerCase().contains(searchText.toLowerCase()) &&
+          !post.title.toLowerCase().contains(searchText.toLowerCase())) {
+        return false;
+      }
+    }
+
+    // タグフィルター
+    if (tags.isNotEmpty) {
+      final hasMatchingTag = tags.any((tag) => post.tags.contains(tag));
+      if (!hasMatchingTag) {
+        return false;
+      }
+    }
+
+    // 期間フィルター
+    if (dateRange != null) {
+      final postDate = post.scheduledDate;
+      if (postDate.isBefore(dateRange!.start) || postDate.isAfter(dateRange!.end)) {
+        return false;
+      }
+    }
+
+    // 公開状態フィルター（SnsPostのstatusに対応）
+    if (publishedOnly && post.status != PostStatus.published) {
+      return false;
+    }
+    if (unpublishedOnly && post.status == PostStatus.published) {
       return false;
     }
 

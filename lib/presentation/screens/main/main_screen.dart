@@ -8,6 +8,8 @@ import '../analytics/analytics_screen.dart';
 import '../settings/settings_screen.dart';
 import '../kpi/kpi_management_screen.dart';
 import '../account/account_management_screen.dart';
+import '../../providers/sns_data_provider.dart';
+import 'package:provider/provider.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -258,53 +260,94 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildEngagementStats() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.engagement.withOpacity(0.1),
-            AppColors.primary.withOpacity(0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.engagement.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Consumer<SnsDataProvider>(
+      builder: (context, provider, child) {
+        // 今月の投稿データを取得
+        final now = DateTime.now();
+        final thisMonthPosts = provider.posts.where((post) {
+          return post.scheduledDate.year == now.year &&
+                 post.scheduledDate.month == now.month;
+        }).toList();
+
+        // 統計計算
+        final totalPosts = thisMonthPosts.length;
+        final totalLikes = thisMonthPosts.fold<int>(
+          0,
+          (sum, post) => sum + post.likesCount,
+        );
+        final totalShares = thisMonthPosts.fold<int>(
+          0,
+          (sum, post) => sum + post.sharesCount,
+        );
+
+        // 数値をフォーマット
+        String formatNumber(int number) {
+          if (number >= 1000) {
+            return '${(number / 1000).toStringAsFixed(1)}K';
+          }
+          return number.toString();
+        }
+
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.engagement.withOpacity(0.1),
+                AppColors.primary.withOpacity(0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.engagement.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                CupertinoIcons.chart_pie_fill,
-                color: AppColors.engagement,
-                size: 16,
+              Row(
+                children: [
+                  Icon(
+                    CupertinoIcons.chart_pie_fill,
+                    color: AppColors.engagement,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '今月の統計',
+                    style: AppTypography.caption1.copyWith(
+                      color: AppColors.engagement,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (provider.isLoading) ...[
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.engagement,
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              const SizedBox(width: 8),
-              Text(
-                '今月の統計',
-                style: AppTypography.caption1.copyWith(
-                  color: AppColors.engagement,
-                  fontWeight: FontWeight.w600,
-                ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildStatItem('投稿数', totalPosts.toString(), AppColors.primary),
+                  _buildStatItem('いいね', formatNumber(totalLikes), AppColors.likes),
+                  _buildStatItem('シェア', formatNumber(totalShares), AppColors.shares),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildStatItem('投稿数', '48', AppColors.primary),
-              _buildStatItem('いいね', '1.2K', AppColors.likes),
-              _buildStatItem('シェア', '342', AppColors.shares),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

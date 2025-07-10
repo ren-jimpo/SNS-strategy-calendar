@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../data/models/post_model.dart';
-import '../../../data/models/sns_account_model.dart';
-import '../../../data/mock/mock_posts.dart';
+import '../../../data/models/sns_post.dart';
+import '../../../data/models/sns_account.dart';
+import '../../providers/sns_data_provider.dart';
 import '../../widgets/post_card.dart';
-import '../../widgets/post_create_modal.dart';
+import '../../widgets/sns_post_create_modal.dart';
 import '../../widgets/search_filter_modal.dart';
 
 class CalendarScreen extends StatefulWidget {
@@ -22,39 +23,82 @@ class _CalendarScreenState extends State<CalendarScreen> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  late List<PostModel> _posts;
-  List<PostModel> _selectedDayPosts = [];
-  List<PostModel> _filteredPosts = [];
+  List<SnsPost> _filteredPosts = [];
+  List<SnsPost> _selectedDayPosts = [];
   SearchFilterConfig _currentFilter = const SearchFilterConfig();
   
   // アカウント管理
-  List<SNSAccount> _accounts = [];
-  SNSAccount? _selectedAccount;
+  List<SnsAccount> _accounts = [];
+  SnsAccount? _selectedAccount;
 
   @override
   void initState() {
     super.initState();
-    _initializeData();
     _selectedDay = DateTime.now();
-    _applyFilters();
-    _updateSelectedDayPosts();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeData();
+    });
   }
 
-  void _initializeData() {
-    // モックアカウントを生成
-    AccountManager.generateMockAccounts();
-    _accounts = AccountManager.activeAccounts;
-    _selectedAccount = AccountManager.selectedAccount;
+  void _initializeData() async {
+    final provider = Provider.of<SnsDataProvider>(context, listen: false);
     
-    // モック投稿を生成（アカウント情報付き）
-    _posts = MockPosts.generateMockPosts();
+    try {
+      await provider.loadData();
+      _updateAccounts();
+      _applyFilters();
+      _updateSelectedDayPosts();
+      
+      // エラーがクリアされていることを確認
+      if (provider.error != null) {
+        provider.clearError();
+      }
+    } catch (e) {
+      // 初期化エラーの場合でも、UIは表示して後でリトライできるようにする
+      print('⚠️ 初期データ読み込みでエラーが発生: $e');
+      _updateAccounts(); // 空のアカウントリストでもUIを表示
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('データの読み込みに失敗しました。設定を確認してリトライしてください。'),
+            backgroundColor: AppColors.systemOrange,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'リトライ',
+              textColor: Colors.white,
+              onPressed: _retryInitialize,
+            ),
+          ),
+        );
+      }
+    }
+  }
+  
+  void _retryInitialize() {
+    print('🔄 データ読み込みをリトライしています...');
+    _initializeData();
+  }
+
+  void _updateAccounts() {
+    final provider = Provider.of<SnsDataProvider>(context, listen: false);
+    setState(() {
+      _accounts = provider.activeAccounts;
+      // デフォルトで最初のアカウントを選択
+      if (_accounts.isNotEmpty && _selectedAccount == null) {
+        _selectedAccount = _accounts.first;
+      }
+    });
   }
 
   void _applyFilters() {
+    final provider = Provider.of<SnsDataProvider>(context, listen: false);
+    final posts = provider.posts;
+    
     setState(() {
-      _filteredPosts = _posts.where((post) {
+      _filteredPosts = posts.where((post) {
         // 検索・フィルター条件をチェック
-        if (!_currentFilter.matchesPost(post)) return false;
+        if (!_currentFilter.matchesSnsPost(post)) return false;
         
         // アカウントフィルターをチェック
         if (_selectedAccount != null) {
@@ -76,7 +120,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     });
   }
 
-  List<PostModel> _getEventsForDay(DateTime day) {
+  List<SnsPost> _getEventsForDay(DateTime day) {
     return _filteredPosts.where((post) {
       return _isSameDay(post.scheduledDate, day);
     }).toList();
@@ -84,21 +128,68 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isWideScreen = screenWidth >= 768;
+    return Consumer<SnsDataProvider>(
+      builder: (context, provider, child) {
+        if (provider.isLoading) {
+          return Scaffold(
+            backgroundColor: AppColors.systemGroupedBackground,
+            body: const Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
 
-    return Scaffold(
-      backgroundColor: AppColors.systemGroupedBackground,
-      body: SafeArea(
-        child: isWideScreen
-            ? _buildWideScreenLayout()
-            : _buildMobileLayout(),
-      ),
-      floatingActionButton: _buildFloatingActionButton(),
+        if (provider.error != null) {
+          return Scaffold(
+            backgroundColor: AppColors.systemGroupedBackground,
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    CupertinoIcons.exclamationmark_triangle,
+                    size: 64,
+                    color: AppColors.systemRed,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'エラーが発生しました',
+                    style: AppTypography.headline,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    provider.error!,
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.secondaryLabel,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  CupertinoButton(
+                    onPressed: () => _initializeData(),
+                    child: const Text('再試行'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isWideScreen = screenWidth >= 768;
+
+        return Scaffold(
+          backgroundColor: AppColors.systemGroupedBackground,
+          body: SafeArea(
+            child: isWideScreen
+                ? _buildWideScreenLayout()
+                : _buildMobileLayout(),
+          ),
+          floatingActionButton: _buildFloatingActionButton(),
+        );
+      },
     );
   }
-
-
 
   Widget _buildWideScreenLayout() {
     return Row(
@@ -354,10 +445,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
         IconButton(
           icon: const Icon(CupertinoIcons.refresh),
           color: AppColors.primary,
-          onPressed: () {
-            setState(() {
-              _posts = MockPosts.generateMockPosts();
-            });
+          onPressed: () async {
+            final provider = Provider.of<SnsDataProvider>(context, listen: false);
+            await provider.refreshData();
+            _applyFilters();
             _updateSelectedDayPosts();
           },
           tooltip: 'データを更新',
@@ -369,13 +460,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget _buildCalendar() {
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: TableCalendar<PostModel>(
-          firstDay: DateTime.utc(2020, 1, 1),
-          lastDay: DateTime.utc(2030, 12, 31),
-          focusedDay: _focusedDay,
-          calendarFormat: _calendarFormat,
-          eventLoader: _getEventsForDay,
-                  startingDayOfWeek: StartingDayOfWeek.monday,
+      child: TableCalendar<SnsPost>(
+        firstDay: DateTime.utc(2020, 1, 1),
+        lastDay: DateTime.utc(2030, 12, 31),
+        focusedDay: _focusedDay,
+        calendarFormat: _calendarFormat,
+        eventLoader: _getEventsForDay,
+        startingDayOfWeek: StartingDayOfWeek.monday,
         selectedDayPredicate: (day) {
           return _selectedDay != null && _isSameDay(_selectedDay!, day);
         },
@@ -388,83 +479,85 @@ class _CalendarScreenState extends State<CalendarScreen> {
             _updateSelectedDayPosts();
           }
         },
-          onFormatChanged: (format) {
-            if (_calendarFormat != format) {
-              setState(() {
-                _calendarFormat = format;
-              });
-            }
-          },
-          onPageChanged: (focusedDay) {
-            _focusedDay = focusedDay;
-          },
-          calendarStyle: CalendarStyle(
-            outsideDaysVisible: false,
-            weekendTextStyle: AppTypography.body.copyWith(
-              color: AppColors.systemRed,
-            ),
-            holidayTextStyle: AppTypography.body.copyWith(
-              color: AppColors.systemRed,
-            ),
-            selectedDecoration: BoxDecoration(
-              color: AppColors.primary,
-              shape: BoxShape.circle,
-            ),
-            todayDecoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.3),
-              shape: BoxShape.circle,
-            ),
-            markerDecoration: BoxDecoration(
-              color: AppColors.systemGreen,
-              shape: BoxShape.circle,
-            ),
-            markersMaxCount: 3,
-            canMarkersOverflow: true,
+        onFormatChanged: (format) {
+          if (_calendarFormat != format) {
+            setState(() {
+              _calendarFormat = format;
+            });
+          }
+        },
+        onPageChanged: (focusedDay) {
+          _focusedDay = focusedDay;
+        },
+        calendarStyle: CalendarStyle(
+          outsideDaysVisible: false,
+          weekendTextStyle: AppTypography.body.copyWith(
+            color: AppColors.systemRed,
           ),
-          headerStyle: HeaderStyle(
-            formatButtonVisible: true,
-            titleCentered: true,
-            formatButtonShowsNext: false,
-            formatButtonDecoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            formatButtonTextStyle: AppTypography.caption1.copyWith(
-              color: Colors.white,
-            ),
-            titleTextStyle: AppTypography.headline,
+          holidayTextStyle: AppTypography.body.copyWith(
+            color: AppColors.systemRed,
           ),
-          calendarBuilders: CalendarBuilders(
-            markerBuilder: (context, day, events) {
-              if (events.isEmpty) return null;
-              
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: events.take(3).map((post) {
-                  Color markerColor = AppColors.systemGreen;
-                  if (post.phase == PostPhase.planning) {
-                    markerColor = AppColors.systemGray;
-                  } else if (post.phase == PostPhase.development) {
-                    markerColor = AppColors.systemOrange;
-                  } else if (post.phase == PostPhase.launch) {
-                    markerColor = AppColors.systemBlue;
-                  }
-                  
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 1),
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: markerColor,
-                      shape: BoxShape.circle,
-                    ),
-                  );
-                }).toList(),
-              );
-            },
+          selectedDecoration: BoxDecoration(
+            color: AppColors.primary,
+            shape: BoxShape.circle,
           ),
+          todayDecoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.3),
+            shape: BoxShape.circle,
+          ),
+          markerDecoration: BoxDecoration(
+            color: AppColors.systemGreen,
+            shape: BoxShape.circle,
+          ),
+          markersMaxCount: 3,
+          canMarkersOverflow: true,
         ),
-      );
+        headerStyle: HeaderStyle(
+          formatButtonVisible: true,
+          titleCentered: true,
+          formatButtonShowsNext: false,
+          formatButtonDecoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          formatButtonTextStyle: AppTypography.caption1.copyWith(
+            color: Colors.white,
+          ),
+          titleTextStyle: AppTypography.headline,
+        ),
+        calendarBuilders: CalendarBuilders(
+          markerBuilder: (context, day, events) {
+            if (events.isEmpty) return null;
+            
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: events.take(3).map((post) {
+                Color markerColor = AppColors.systemGreen;
+                if (post.status == PostStatus.draft) {
+                  markerColor = AppColors.systemGray;
+                } else if (post.status == PostStatus.scheduled) {
+                  markerColor = AppColors.systemOrange;
+                } else if (post.status == PostStatus.published) {
+                  markerColor = AppColors.systemBlue;
+                } else if (post.status == PostStatus.failed) {
+                  markerColor = AppColors.systemRed;
+                }
+                
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 1),
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: markerColor,
+                    shape: BoxShape.circle,
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ),
+    );
   }
 
   Widget _buildSelectedDaySection() {
@@ -516,8 +609,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildQuickStats() {
-    final publishedPosts = _selectedDayPosts.where((p) => p.isPublished).length;
-    final scheduledPosts = _selectedDayPosts.where((p) => !p.isPublished).length;
+    final publishedPosts = _selectedDayPosts.where((p) => p.status == PostStatus.published).length;
+    final scheduledPosts = _selectedDayPosts.where((p) => p.status == PostStatus.scheduled).length;
 
     return Row(
       children: [
@@ -597,8 +690,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     padding: const EdgeInsets.only(right: 8),
                     child: _buildAccountFilterChip(
                       account,
-                      account.displayName,
-                      account.platformColor,
+                      account.accountName,
+                      _getPlatformColor(account.platform),
                     ),
                   );
                 }),
@@ -610,7 +703,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildAccountFilterChip(SNSAccount? account, String label, Color color) {
+  Widget _buildAccountFilterChip(SnsAccount? account, String label, Color color) {
     final isSelected = _selectedAccount == account;
     
     return GestureDetector(
@@ -632,7 +725,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           children: [
             if (account != null) ...[
               Icon(
-                account.platformIcon,
+                _getPlatformIcon(account.platform),
                 size: 14,
                 color: isSelected ? color : color.withOpacity(0.7),
               ),
@@ -686,7 +779,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       itemCount: _selectedDayPosts.length,
       itemBuilder: (context, index) {
         final post = _selectedDayPosts[index];
-        return PostCard(
+        return SnsPostCard(
           post: post,
           onTap: () => _navigateToPostDetail(post),
         );
@@ -707,31 +800,31 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  void _navigateToPostDetail(PostModel? post) {
-    showDialog(
+  void _navigateToPostDetail(SnsPost? post) async {
+    final result = await showDialog<SnsPost>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => PostCreateModal(
+      builder: (context) => SnsPostCreateModal(
         post: post,
         selectedDate: _selectedDay ?? DateTime.now(),
-        onSaved: (savedPost) {
-          setState(() {
-            if (post != null) {
-              // 既存投稿の更新
-              final index = _posts.indexWhere((p) => p.id == post.id);
-              if (index != -1) {
-                _posts[index] = savedPost;
-              }
-            } else {
-              // 新規投稿の追加
-              _posts.add(savedPost);
-            }
-            _applyFilters();
-            _updateSelectedDayPosts();
-          });
-        },
+        accounts: _accounts,
       ),
     );
+
+    if (result != null) {
+      final provider = Provider.of<SnsDataProvider>(context, listen: false);
+      
+      if (post != null) {
+        // 既存投稿の更新
+        await provider.updatePost(result);
+      } else {
+        // 新規投稿の追加
+        await provider.createPost(result);
+      }
+      
+      _applyFilters();
+      _updateSelectedDayPosts();
+    }
   }
 
   void _showSearchDialog() {
@@ -784,7 +877,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       return _isSameDay(post.scheduledDate, today);
     }).toList();
     
-    final publishedToday = todayPosts.where((post) => post.isPublished).length;
+    final publishedToday = todayPosts.where((post) => post.status == PostStatus.published).length;
     final pendingToday = todayPosts.length - publishedToday;
     
     // 今週の投稿数
@@ -1046,18 +1139,55 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  void _onAccountChanged(SNSAccount? account) {
+  void _onAccountChanged(SnsAccount? account) {
     setState(() {
       _selectedAccount = account;
-      AccountManager.selectAccount(account?.id);
     });
     _applyFilters();
     _updateSelectedDayPosts();
   }
 
-
-
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Color _getPlatformColor(String platform) {
+    switch (platform.toLowerCase()) {
+      case 'instagram':
+        return const Color(0xFFE4405F);
+      case 'twitter':
+      case 'x':
+        return const Color(0xFF1DA1F2);
+      case 'youtube':
+        return const Color(0xFFFF0000);
+      case 'tiktok':
+        return const Color(0xFF000000);
+      case 'facebook':
+        return const Color(0xFF1877F2);
+      case 'linkedin':
+        return const Color(0xFF0077B5);
+      default:
+        return AppColors.systemBlue;
+    }
+  }
+
+  IconData _getPlatformIcon(String platform) {
+    switch (platform.toLowerCase()) {
+      case 'instagram':
+        return CupertinoIcons.camera;
+      case 'twitter':
+      case 'x':
+        return CupertinoIcons.chat_bubble;
+      case 'youtube':
+        return CupertinoIcons.play_rectangle;
+      case 'tiktok':
+        return CupertinoIcons.music_note;
+      case 'facebook':
+        return CupertinoIcons.person_3;
+      case 'linkedin':
+        return CupertinoIcons.briefcase;
+      default:
+        return CupertinoIcons.at;
+    }
   }
 } 

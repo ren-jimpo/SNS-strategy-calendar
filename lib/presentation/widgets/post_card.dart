@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../data/models/post_model.dart';
+import '../../data/models/sns_post.dart';
 
 class PostCard extends StatelessWidget {
   final PostModel post;
@@ -671,5 +672,269 @@ class PostCard extends StatelessWidget {
     if (score >= 80) return AppColors.systemGreen;
     if (score >= 60) return AppColors.systemOrange;
     return AppColors.systemRed;
+  }
+}
+
+class SnsPostCard extends StatelessWidget {
+  final SnsPost post;
+  final VoidCallback? onTap;
+  final bool showPerformance;
+  final bool compact;
+
+  const SnsPostCard({
+    super.key,
+    required this.post,
+    this.onTap,
+    this.showPerformance = true,
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.symmetric(
+        horizontal: compact ? 8 : 16,
+        vertical: compact ? 4 : 8,
+      ),
+      child: Material(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  _getStatusColor().withOpacity(0.05),
+                  Colors.transparent,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: _getStatusColor().withOpacity(0.2),
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: _getStatusColor().withOpacity(0.1),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 12),
+                _buildContent(),
+                if (post.tags.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _buildTags(),
+                ],
+                if (showPerformance && post.status == PostStatus.published) ...[
+                  const SizedBox(height: 16),
+                  _buildPerformanceMetrics(),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: _getStatusColor(),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            post.status.displayName,
+            style: AppTypography.caption2.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const Spacer(),
+        Icon(
+          _getStatusIcon(),
+          color: _getStatusColor(),
+          size: 18,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          DateFormat('M/d HH:mm').format(post.scheduledDate),
+          style: AppTypography.caption1.copyWith(
+            color: AppColors.secondaryLabel,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (post.title.isNotEmpty) ...[
+          Text(
+            post.title,
+            style: AppTypography.headline.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 6),
+        ],
+        Text(
+          post.content,
+          style: AppTypography.body,
+          maxLines: compact ? 2 : 4,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTags() {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: post.tags.take(3).map((tag) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.engagement.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: AppColors.engagement.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Text(
+            tag,
+            style: AppTypography.caption2.copyWith(
+              color: AppColors.engagement,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildPerformanceMetrics() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.systemGreen.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.systemGreen.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildMetricItem(
+              'いいね',
+              post.likesCount.toString(),
+              CupertinoIcons.heart_fill,
+              AppColors.systemRed,
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 30,
+            color: AppColors.separator,
+          ),
+          Expanded(
+            child: _buildMetricItem(
+              'コメント',
+              post.commentsCount.toString(),
+              CupertinoIcons.chat_bubble_fill,
+              AppColors.systemBlue,
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 30,
+            color: AppColors.separator,
+          ),
+          Expanded(
+            child: _buildMetricItem(
+              'シェア',
+              post.sharesCount.toString(),
+              CupertinoIcons.arrow_2_squarepath,
+              AppColors.systemGreen,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricItem(String label, String value, IconData icon, Color color) {
+    return Column(
+      children: [
+        Icon(
+          icon,
+          color: color,
+          size: 16,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: AppTypography.caption1.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Text(
+          label,
+          style: AppTypography.caption2.copyWith(
+            color: AppColors.secondaryLabel,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _getStatusColor() {
+    switch (post.status) {
+      case PostStatus.draft:
+        return AppColors.systemGray;
+      case PostStatus.scheduled:
+        return AppColors.systemOrange;
+      case PostStatus.published:
+        return AppColors.systemGreen;
+      case PostStatus.failed:
+        return AppColors.systemRed;
+    }
+  }
+
+  IconData _getStatusIcon() {
+    switch (post.status) {
+      case PostStatus.draft:
+        return CupertinoIcons.doc_text;
+      case PostStatus.scheduled:
+        return CupertinoIcons.clock;
+      case PostStatus.published:
+        return CupertinoIcons.checkmark_circle;
+      case PostStatus.failed:
+        return CupertinoIcons.exclamationmark_triangle;
+    }
   }
 } 

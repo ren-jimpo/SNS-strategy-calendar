@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../data/models/sns_account_model.dart';
+import '../../../data/models/sns_account.dart';
 import '../../../data/models/post_model.dart';
 import '../../../data/mock/mock_posts.dart';
+import '../../providers/sns_data_provider.dart';
+import '../../widgets/account_edit_modal.dart';
 
 class AccountManagementScreen extends StatefulWidget {
   const AccountManagementScreen({super.key});
@@ -14,8 +17,8 @@ class AccountManagementScreen extends StatefulWidget {
 }
 
 class _AccountManagementScreenState extends State<AccountManagementScreen> {
-  List<SNSAccount> _accounts = [];
-  SNSAccount? _selectedAccount;
+  List<SnsAccount> _accounts = [];
+  SnsAccount? _selectedAccount;
   late List<PostModel> _posts;
   List<PostModel> _filteredPosts = [];
 
@@ -27,13 +30,48 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   }
 
   void _initializeData() {
-    // モックアカウントを生成
-    AccountManager.generateMockAccounts();
-    _accounts = AccountManager.activeAccounts;
-    _selectedAccount = AccountManager.selectedAccount;
+    // Supabaseからアカウントデータを読み込み
+    _loadAccounts();
     
-    // モック投稿を生成
-    _posts = MockPosts.generateMockPosts();
+    // 投稿データも実データから取得
+    _loadPostsData();
+  }
+
+  void _loadAccounts() async {
+    try {
+      final provider = Provider.of<SnsDataProvider>(context, listen: false);
+      await provider.loadAccounts();
+      
+      if (mounted) {
+        setState(() {
+          // Supabaseからの実際のアカウントデータを使用
+          _accounts = provider.accounts;
+          
+          // 選択されたアカウントがない、または削除された場合は最初のアカウントを選択
+          if (_selectedAccount == null || !_accounts.any((acc) => acc.id == _selectedAccount!.id)) {
+            _selectedAccount = _accounts.isNotEmpty ? _accounts.first : null;
+          }
+          
+          _applyFilters();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('アカウント読み込みエラー: $e'),
+            backgroundColor: AppColors.systemRed,
+          ),
+        );
+      }
+    }
+  }
+
+  void _loadPostsData() {
+    final provider = Provider.of<SnsDataProvider>(context, listen: false);
+    // SnsPostからPostModelへの変換（現在は空リストを使用）
+    _posts = [];
+    _applyFilters();
   }
 
   void _applyFilters() {
@@ -391,7 +429,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     );
   }
 
-  Widget _buildAccountCard(SNSAccount account) {
+  Widget _buildAccountCard(SnsAccount account) {
     final accountPosts = _posts.where((post) => post.accountId == account.id).toList();
     final publishedCount = accountPosts.where((post) => post.isPublished).length;
     final pendingCount = accountPosts.length - publishedCount;
@@ -404,7 +442,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _selectedAccount?.id == account.id 
-              ? account.platformColor.withOpacity(0.5)
+              ? _getPlatformColor(account.platform).withOpacity(0.5)
               : AppColors.separator.withOpacity(0.3),
           width: _selectedAccount?.id == account.id ? 2 : 1,
         ),
@@ -425,18 +463,18 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: account.platformColor,
+                  color: _getPlatformColor(account.platform),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: account.platformColor.withOpacity(0.3),
+                      color: _getPlatformColor(account.platform).withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 child: Icon(
-                  account.platformIcon,
+                  _getPlatformIcon(account.platform),
                   color: Colors.white,
                   size: 24,
                 ),
@@ -447,7 +485,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      account.displayName,
+                      account.accountName,
                       style: AppTypography.title3.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -455,27 +493,27 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      account.username,
+                      '@${account.accountName}',
                       style: AppTypography.body.copyWith(
                         color: AppColors.secondaryLabel,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: account.platformColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        account.platform.displayName,
-                        style: AppTypography.caption1.copyWith(
-                          color: account.platformColor,
-                          fontWeight: FontWeight.w600,
+                                          Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _getPlatformColor(account.platform).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          account.platform.toUpperCase(),
+                          style: AppTypography.caption1.copyWith(
+                            color: _getPlatformColor(account.platform),
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -648,94 +686,48 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     );
   }
 
-  void _onAccountChanged(SNSAccount? account) {
+  void _onAccountChanged(SnsAccount? account) {
     setState(() {
       _selectedAccount = account;
-      AccountManager.selectAccount(account?.id);
+      // AccountManager.selectAccount(account?.id); // 将来的にプロバイダーで実装
     });
     _applyFilters();
   }
 
   void _showAddAccountModal() {
-    showCupertinoModalPopup(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => CupertinoActionSheet(
-        title: const Text('アカウントを追加'),
-        message: const Text('どのSNSプラットフォームのアカウントを追加しますか？'),
-        actions: SNSPlatform.values.map((platform) {
-          return CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(context);
-              _addMockAccount(platform);
-            },
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  _getPlatformIcon(platform),
-                  color: _getPlatformColor(platform),
-                ),
-                const SizedBox(width: 8),
-                Text(platform.displayName),
-              ],
-            ),
-          );
-        }).toList(),
-        cancelButton: CupertinoActionSheetAction(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('キャンセル'),
-        ),
-      ),
-    );
-  }
-
-  void _addMockAccount(SNSPlatform platform) {
-    final newAccount = SNSAccount(
-      id: '${platform.key}_${DateTime.now().millisecondsSinceEpoch}',
-      platform: platform,
-      username: '@new_${platform.key}_account',
-      displayName: '新しい${platform.displayName}アカウント',
-      connectedAt: DateTime.now(),
-    );
-    
-    setState(() {
-      AccountManager.addAccount(newAccount);
-      _accounts = AccountManager.activeAccounts;
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const AccountEditModal(),
+    ).then((result) {
+      if (result != null) {
+        // 結果がSnsAccountオブジェクトの場合、UIを更新
+        _loadAccounts();
+      }
     });
-    
-    // 追加されたアカウントを選択
-    _onAccountChanged(newAccount);
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${platform.displayName}アカウントを追加しました'),
-        backgroundColor: AppColors.systemGreen,
-      ),
-    );
   }
 
-  void _editAccount(SNSAccount account) {
-    showCupertinoDialog(
+  // 以下のメソッドは将来的にプロバイダーで実装
+  void _editAccount(SnsAccount account) {
+    showModalBottomSheet(
       context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: const Text('アカウント編集'),
-        content: const Text('アカウント編集機能は今後実装予定です。'),
-        actions: [
-          CupertinoDialogAction(
-            child: const Text('OK'),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
-      ),
-    );
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => AccountEditModal(account: account),
+    ).then((result) {
+      if (result != null) {
+        _loadAccounts();
+      }
+    });
   }
 
-  void _deleteAccount(SNSAccount account) {
+  void _deleteAccount(SnsAccount account) {
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(
         title: const Text('アカウントを削除'),
-        content: Text('${account.displayName}を削除しますか？この操作は取り消せません。'),
+        content: Text('${account.accountName}を削除しますか？この操作は取り消せません。'),
         actions: [
           CupertinoDialogAction(
             child: const Text('キャンセル'),
@@ -744,24 +736,28 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
           CupertinoDialogAction(
             isDestructiveAction: true,
             child: const Text('削除'),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              setState(() {
-                AccountManager.removeAccount(account.id);
-                _accounts = AccountManager.activeAccounts;
-                if (_selectedAccount?.id == account.id) {
-                  _selectedAccount = null;
-                  AccountManager.selectAccount(null);
-                }
-              });
-              _applyFilters();
+              final provider = Provider.of<SnsDataProvider>(context, listen: false);
+              final success = await provider.deleteAccount(account.id);
               
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${account.displayName}を削除しました'),
-                  backgroundColor: AppColors.systemRed,
-                ),
-              );
+              if (success) {
+                if (_selectedAccount?.id == account.id) {
+                  setState(() {
+                    _selectedAccount = null;
+                  });
+                }
+                _applyFilters();
+                
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${account.accountName}を削除しました'),
+                      backgroundColor: AppColors.systemRed,
+                    ),
+                  );
+                }
+              }
             },
           ),
         ],
@@ -769,37 +765,43 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     );
   }
 
-  IconData _getPlatformIcon(SNSPlatform platform) {
-    switch (platform) {
-      case SNSPlatform.instagram:
+  IconData _getPlatformIcon(String platform) {
+    switch (platform.toLowerCase()) {
+      case 'instagram':
         return CupertinoIcons.camera_fill;
-      case SNSPlatform.x:
+      case 'twitter':
+      case 'x':
         return CupertinoIcons.chat_bubble_text_fill;
-      case SNSPlatform.youtube:
+      case 'youtube':
         return CupertinoIcons.play_rectangle_fill;
-      case SNSPlatform.tiktok:
+      case 'tiktok':
         return CupertinoIcons.music_note;
-      case SNSPlatform.facebook:
+      case 'facebook':
         return CupertinoIcons.person_3_fill;
-      case SNSPlatform.linkedin:
+      case 'linkedin':
         return CupertinoIcons.briefcase_fill;
+      default:
+        return CupertinoIcons.globe;
     }
   }
 
-  Color _getPlatformColor(SNSPlatform platform) {
-    switch (platform) {
-      case SNSPlatform.instagram:
+  Color _getPlatformColor(String platform) {
+    switch (platform.toLowerCase()) {
+      case 'instagram':
         return const Color(0xFFE4405F);
-      case SNSPlatform.x:
+      case 'twitter':
+      case 'x':
         return const Color(0xFF1DA1F2);
-      case SNSPlatform.youtube:
+      case 'youtube':
         return const Color(0xFFFF0000);
-      case SNSPlatform.tiktok:
+      case 'tiktok':
         return const Color(0xFF000000);
-      case SNSPlatform.facebook:
+      case 'facebook':
         return const Color(0xFF1877F2);
-      case SNSPlatform.linkedin:
+      case 'linkedin':
         return const Color(0xFF0077B5);
+      default:
+        return AppColors.systemGray;
     }
   }
 } 
