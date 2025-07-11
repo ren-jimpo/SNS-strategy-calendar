@@ -41,19 +41,6 @@ class _SnsPostCreateModalState extends State<SnsPostCreateModal> with SingleTick
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
 
-  final List<String> _availableTags = [
-    'プロダクト',
-    'アップデート',
-    'ユーザー向け',
-    '技術',
-    'お知らせ',
-    '機能紹介',
-    'チュートリアル',
-    'イベント',
-    'キャンペーン',
-    'フィードバック',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -720,44 +707,284 @@ class _SnsPostCreateModalState extends State<SnsPostCreateModal> with SingleTick
   void _showTagSelector() {
     showCupertinoModalPopup(
       context: context,
-      builder: (context) => Container(
-        height: 300,
-        color: AppColors.secondarySystemGroupedBackground,
+      builder: (BuildContext modalContext) => Container(
+        height: 400,
+        decoration: const BoxDecoration(
+          color: AppColors.secondarySystemGroupedBackground,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
         child: Column(
           children: [
             Container(
               padding: const EdgeInsets.all(16),
-              child: Text(
-                'タグを選択',
-                style: AppTypography.headline,
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: AppColors.separator.withOpacity(0.3),
+                    width: 0.5,
+                  ),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'タグを選択',
+                    style: AppTypography.headline.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(modalContext),
+                    child: Icon(
+                      CupertinoIcons.xmark_circle_fill,
+                      color: AppColors.systemGray3,
+                      size: 24,
+                    ),
+                  ),
+                ],
               ),
             ),
             Expanded(
-              child: ListView(
-                children: _availableTags.map((tag) {
-                  final isSelected = _selectedTags.contains(tag);
-                  return ListTile(
-                    title: Text(tag),
-                    trailing: isSelected 
-                        ? Icon(CupertinoIcons.checkmark, color: AppColors.primary)
-                        : null,
-                    onTap: () {
-                      setState(() {
-                        if (isSelected) {
-                          _selectedTags.remove(tag);
-                        } else {
-                          _selectedTags.add(tag);
-                        }
-                      });
-                      Navigator.pop(context);
-                    },
+              child: Consumer<SnsDataProvider>(
+                builder: (context, provider, child) {
+                  final allTags = provider.allTags;
+                  final customTags = provider.customTagStrings;
+                  
+                  return Column(
+                    children: [
+                      // 新しいタグを追加ボタン
+                      Container(
+                        margin: const EdgeInsets.all(16),
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pop(modalContext);
+                            _showAddCustomTagDialog();
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.systemBlue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppColors.systemBlue,
+                                width: 2,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  CupertinoIcons.add_circled_solid,
+                                  color: AppColors.systemBlue,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '新しいタグを追加',
+                                  style: AppTypography.body.copyWith(
+                                    color: AppColors.systemBlue,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      // タグリスト
+                      Expanded(
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: allTags.length,
+                          itemBuilder: (context, index) {
+                            final tag = allTags[index];
+                            final isSelected = _selectedTags.contains(tag);
+                            final isCustomTag = customTags.contains(tag);
+                            
+                            return GestureDetector(
+                              onTap: () {
+                                // メインのcontextでsetStateを実行
+                                if (mounted) {
+                                  setState(() {
+                                    if (isSelected) {
+                                      _selectedTags.remove(tag);
+                                    } else {
+                                      _selectedTags.add(tag);
+                                    }
+                                  });
+                                }
+                                Navigator.pop(modalContext);
+                                
+                                // フィードバック表示
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      isSelected 
+                                          ? 'タグ「$tag」を削除しました' 
+                                          : 'タグ「$tag」を追加しました',
+                                    ),
+                                    backgroundColor: isSelected 
+                                        ? AppColors.systemOrange 
+                                        : AppColors.systemGreen,
+                                    duration: const Duration(seconds: 1),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: isSelected 
+                                      ? AppColors.engagement.withOpacity(0.1) 
+                                      : AppColors.systemBackground,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected 
+                                        ? AppColors.engagement 
+                                        : AppColors.separator.withOpacity(0.3),
+                                    width: isSelected ? 2 : 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      isCustomTag ? CupertinoIcons.tag_circle_fill : CupertinoIcons.tag_fill,
+                                      color: isSelected 
+                                          ? AppColors.engagement 
+                                          : (isCustomTag ? AppColors.systemPurple : AppColors.systemGray),
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            tag,
+                                            style: AppTypography.body.copyWith(
+                                              color: isSelected 
+                                                  ? AppColors.engagement 
+                                                  : AppColors.label,
+                                              fontWeight: isSelected 
+                                                  ? FontWeight.w600 
+                                                  : FontWeight.w500,
+                                            ),
+                                          ),
+                                          if (isCustomTag)
+                                            Text(
+                                              'カスタムタグ',
+                                              style: AppTypography.caption2.copyWith(
+                                                color: AppColors.systemPurple,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (isSelected)
+                                      Icon(
+                                        CupertinoIcons.checkmark_circle_fill, 
+                                        color: AppColors.engagement,
+                                        size: 20,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   );
-                }).toList(),
+                },
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  void _showAddCustomTagDialog() {
+    final TextEditingController tagController = TextEditingController();
+    
+    showCupertinoDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return CupertinoAlertDialog(
+          title: const Text('新しいタグを追加'),
+          content: Column(
+            children: [
+              const SizedBox(height: 16),
+              const Text('追加したいハッシュタグを入力してください'),
+              const SizedBox(height: 16),
+              CupertinoTextField(
+                controller: tagController,
+                placeholder: 'タグ名（例：新機能）',
+                prefix: Container(
+                  margin: const EdgeInsets.only(left: 8),
+                  child: Text(
+                    '#',
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.systemGray,
+                    ),
+                  ),
+                ),
+                maxLength: 30,
+              ),
+            ],
+          ),
+          actions: [
+            CupertinoDialogAction(
+              child: const Text('キャンセル'),
+              onPressed: () {
+                tagController.dispose();
+                Navigator.pop(context);
+              },
+            ),
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              child: const Text('追加'),
+              onPressed: () async {
+                final tag = tagController.text.trim();
+                Navigator.pop(context);
+                
+                if (tag.isNotEmpty) {
+                  final provider = Provider.of<SnsDataProvider>(context, listen: false);
+                  final success = await provider.createCustomTag(tag);
+                  
+                  if (success) {
+                    final normalizedTag = provider.normalizeTag(tag);
+                    if (mounted) {
+                      setState(() {
+                        _selectedTags.add(normalizedTag);
+                      });
+                      
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('カスタムタグ「$normalizedTag」を追加しました'),
+                          backgroundColor: AppColors.systemGreen,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(provider.error ?? 'タグの追加に失敗しました'),
+                        backgroundColor: AppColors.systemRed,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                }
+                
+                tagController.dispose();
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 

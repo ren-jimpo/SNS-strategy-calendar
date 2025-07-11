@@ -10,12 +10,14 @@ class KpiEditModal extends StatefulWidget {
   final KpiModel? kpi;
   final List<PhaseModel> phases;
   final KpiType? initialType;
+  final String? preSelectedPhaseId;
 
   const KpiEditModal({
     super.key,
     this.kpi,
     required this.phases,
     this.initialType,
+    this.preSelectedPhaseId,
   });
 
   @override
@@ -46,7 +48,7 @@ class _KpiEditModalState extends State<KpiEditModal> {
     _currentController = TextEditingController(text: widget.kpi?.currentValue.toString() ?? '0');
     
     _selectedType = widget.kpi?.type ?? widget.initialType ?? KpiType.kpi;
-    _selectedPhaseId = widget.kpi?.phaseId;
+    _selectedPhaseId = widget.kpi?.phaseId ?? widget.preSelectedPhaseId;
     _isActive = widget.kpi?.isActive ?? true;
   }
 

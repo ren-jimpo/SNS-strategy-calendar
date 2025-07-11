@@ -45,8 +45,7 @@ class KpiModel {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
+    final json = <String, dynamic>{
       'name': name,
       'description': description,
       'type': type.name,
@@ -58,6 +57,13 @@ class KpiModel {
       'updated_at': updatedAt.toIso8601String(),
       'is_active': isActive,
     };
+    
+    // IDが空でない場合のみ含める（更新時）
+    if (id.isNotEmpty) {
+      json['id'] = id;
+    }
+    
+    return json;
   }
 
   KpiModel copyWith({
@@ -126,8 +132,7 @@ class PhaseModel {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
+    final json = <String, dynamic>{
       'name': name,
       'description': description,
       'order': order,
@@ -135,6 +140,13 @@ class PhaseModel {
       'updated_at': updatedAt.toIso8601String(),
       'is_active': isActive,
     };
+    
+    // IDが空でない場合のみ含める（更新時）
+    if (id.isNotEmpty) {
+      json['id'] = id;
+    }
+    
+    return json;
   }
 
   PhaseModel copyWith({

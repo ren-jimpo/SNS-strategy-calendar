@@ -1,24 +1,53 @@
 import 'package:flutter/foundation.dart';
 import '../../data/models/sns_account.dart';
 import '../../data/models/sns_post.dart';
+import '../../data/models/custom_tag.dart';
 import '../../data/repositories/sns_account_repository.dart';
 import '../../data/repositories/sns_post_repository.dart';
+import '../../data/repositories/custom_tag_repository.dart';
 
 class SnsDataProvider extends ChangeNotifier {
   final SnsAccountRepository _accountRepository = SnsAccountRepository();
   final SnsPostRepository _postRepository = SnsPostRepository();
+  final CustomTagRepository _customTagRepository = CustomTagRepository();
 
   // State
   List<SnsAccount> _accounts = [];
   List<SnsPost> _posts = [];
+  List<CustomTag> _customTags = [];
   bool _isLoading = false;
   String? _error;
 
   // Getters
   List<SnsAccount> get accounts => _accounts;
   List<SnsPost> get posts => _posts;
+  List<CustomTag> get customTags => _customTags;
   bool get isLoading => _isLoading;
   String? get error => _error;
+
+  // プリセットタグ
+  static const List<String> presetTags = [
+    'プロダクト',
+    'アップデート',
+    'ユーザー向け',
+    '技術',
+    'お知らせ',
+    '機能紹介',
+    'チュートリアル',
+    'イベント',
+    'キャンペーン',
+    'フィードバック',
+  ];
+
+  // 全タグ（プリセット + カスタム）
+  List<String> get allTags {
+    final List<String> tags = [...presetTags];
+    tags.addAll(_customTags.map((tag) => tag.tag));
+    return tags;
+  }
+
+  // カスタムタグの文字列リスト
+  List<String> get customTagStrings => _customTags.map((tag) => tag.tag).toList();
 
   // アクティブなアカウントのみを取得
   List<SnsAccount> get activeAccounts => _accounts.where((account) => account.isActive).toList();
@@ -76,6 +105,7 @@ class SnsDataProvider extends ChangeNotifier {
       await Future.wait([
         loadAccounts(),
         loadPosts(),
+        loadCustomTags(),
       ]);
     } catch (e) {
       _setError('データの読み込みに失敗しました: $e');
@@ -307,5 +337,62 @@ supabase_schema.sql をSupabaseのSQLエディタで実行してテーブルを�
   // データのリフレッシュ
   Future<void> refreshData() async {
     await loadData();
+  }
+
+  // カスタムタグの読み込み
+  Future<void> loadCustomTags() async {
+    try {
+      _customTags = await _customTagRepository.getAllCustomTags();
+      notifyListeners();
+    } catch (e) {
+      _setError('カスタムタグの読み込みに失敗しました: $e');
+    }
+  }
+
+  // カスタムタグの作成
+  Future<bool> createCustomTag(String tag) async {
+    try {
+      // タグの検証
+      if (!_customTagRepository.isValidTag(tag)) {
+        _setError('無効なタグです。英数字、日本語、アンダースコアのみ使用可能です（1-30文字）');
+        return false;
+      }
+
+      final newTag = await _customTagRepository.createCustomTag(tag);
+      _customTags.add(newTag);
+      _customTags.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _setError('カスタムタグの作成に失敗しました: $e');
+      return false;
+    }
+  }
+
+  // カスタムタグの削除
+  Future<bool> deleteCustomTag(String id) async {
+    try {
+      await _customTagRepository.deleteCustomTag(id);
+      _customTags.removeWhere((tag) => tag.id == id);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _setError('カスタムタグの削除に失敗しました: $e');
+      return false;
+    }
+  }
+
+  // タグの検証
+  bool isValidCustomTag(String tag) {
+    return _customTagRepository.isValidTag(tag);
+  }
+
+  // タグの正規化
+  String normalizeTag(String tag) {
+    String normalized = tag.trim();
+    if (!normalized.startsWith('#')) {
+      normalized = '#$normalized';
+    }
+    return normalized.replaceAll(RegExp(r'\s+'), '');
   }
 } 

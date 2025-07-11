@@ -169,7 +169,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           // ヘッダー
           _buildSidebarHeader(),
           // エンゲージメント統計
-          _buildEngagementStats(),
+          _buildSnsAccountsStats(),
           // ナビゲーションアイテム
           Expanded(
             child: ListView.builder(
@@ -259,33 +259,59 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildEngagementStats() {
+  Widget _buildSnsAccountsStats() {
     return Consumer<SnsDataProvider>(
       builder: (context, provider, child) {
-        // 今月の投稿データを取得
-        final now = DateTime.now();
-        final thisMonthPosts = provider.posts.where((post) {
-          return post.scheduledDate.year == now.year &&
-                 post.scheduledDate.month == now.month;
-        }).toList();
-
-        // 統計計算
-        final totalPosts = thisMonthPosts.length;
-        final totalLikes = thisMonthPosts.fold<int>(
-          0,
-          (sum, post) => sum + post.likesCount,
-        );
-        final totalShares = thisMonthPosts.fold<int>(
-          0,
-          (sum, post) => sum + post.sharesCount,
-        );
+        final activeAccounts = provider.activeAccounts;
 
         // 数値をフォーマット
         String formatNumber(int number) {
-          if (number >= 1000) {
+          if (number >= 1000000) {
+            return '${(number / 1000000).toStringAsFixed(1)}M';
+          } else if (number >= 1000) {
             return '${(number / 1000).toStringAsFixed(1)}K';
           }
           return number.toString();
+        }
+
+        // プラットフォーム別色設定
+        Color getPlatformColor(String platform) {
+          switch (platform) {
+            case 'instagram':
+              return const Color(0xFFE4405F);
+            case 'twitter':
+              return const Color(0xFF1DA1F2);
+            case 'facebook':
+              return const Color(0xFF1877F2);
+            case 'youtube':
+              return const Color(0xFFFF0000);
+            case 'tiktok':
+              return const Color(0xFF000000);
+            case 'linkedin':
+              return const Color(0xFF0A66C2);
+            default:
+              return AppColors.systemBlue;
+          }
+        }
+
+        // プラットフォーム別アイコン設定
+        IconData getPlatformIcon(String platform) {
+          switch (platform) {
+            case 'instagram':
+              return CupertinoIcons.camera;
+            case 'twitter':
+              return CupertinoIcons.chat_bubble;
+            case 'facebook':
+              return CupertinoIcons.group;
+            case 'youtube':
+              return CupertinoIcons.play_rectangle;
+            case 'tiktok':
+              return CupertinoIcons.music_note;
+            case 'linkedin':
+              return CupertinoIcons.briefcase;
+            default:
+              return CupertinoIcons.device_phone_portrait;
+          }
         }
 
         return Container(
@@ -294,13 +320,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                AppColors.engagement.withOpacity(0.1),
-                AppColors.primary.withOpacity(0.05),
+                AppColors.systemBlue.withOpacity(0.1),
+                AppColors.systemIndigo.withOpacity(0.05),
               ],
             ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: AppColors.engagement.withOpacity(0.2),
+              color: AppColors.systemBlue.withOpacity(0.2),
               width: 1,
             ),
           ),
@@ -310,40 +336,81 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
               Row(
                 children: [
                   Icon(
-                    CupertinoIcons.chart_pie_fill,
-                    color: AppColors.engagement,
+                    CupertinoIcons.person_2_fill,
+                    color: AppColors.systemBlue,
                     size: 16,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    '今月の統計',
+                    'SNS別フォロワー',
                     style: AppTypography.caption1.copyWith(
-                      color: AppColors.engagement,
+                      color: AppColors.systemBlue,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
+                  const Spacer(),
                   if (provider.isLoading) ...[
-                    const SizedBox(width: 8),
                     SizedBox(
                       width: 12,
                       height: 12,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: AppColors.engagement,
+                        color: AppColors.systemBlue,
                       ),
                     ),
                   ],
                 ],
               ),
               const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildStatItem('投稿数', totalPosts.toString(), AppColors.primary),
-                  _buildStatItem('いいね', formatNumber(totalLikes), AppColors.likes),
-                  _buildStatItem('シェア', formatNumber(totalShares), AppColors.shares),
-                ],
-              ),
+              
+              if (activeAccounts.isEmpty) ...[
+                Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        CupertinoIcons.person_badge_plus,
+                        color: AppColors.secondaryLabel,
+                        size: 24,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'アカウントがありません',
+                        style: AppTypography.caption1.copyWith(
+                          color: AppColors.secondaryLabel,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                // アカウント一覧をスクロール可能なリストで表示
+                SizedBox(
+                  height: activeAccounts.length > 3 ? 120 : null,
+                  child: activeAccounts.length > 3 
+                    ? ListView.builder(
+                        itemCount: activeAccounts.length,
+                        itemBuilder: (context, index) {
+                          final account = activeAccounts[index];
+                          return _buildAccountFollowerItem(
+                            account, 
+                            getPlatformColor(account.platform),
+                            getPlatformIcon(account.platform),
+                            formatNumber(account.followersCount),
+                          );
+                        },
+                      )
+                    : Column(
+                        children: activeAccounts.map((account) => 
+                          _buildAccountFollowerItem(
+                            account, 
+                            getPlatformColor(account.platform),
+                            getPlatformIcon(account.platform),
+                            formatNumber(account.followersCount),
+                          )
+                        ).toList(),
+                      ),
+                ),
+              ],
             ],
           ),
         );
@@ -351,23 +418,57 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildStatItem(String label, String value, Color color) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: AppTypography.headline.copyWith(
-            color: color,
-            fontWeight: FontWeight.w700,
-          ),
+  Widget _buildAccountFollowerItem(
+    dynamic account, 
+    Color platformColor, 
+    IconData platformIcon, 
+    String followersFormatted
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.systemBackground.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.separator.withOpacity(0.3),
+          width: 0.5,
         ),
-        Text(
-          label,
-          style: AppTypography.caption2.copyWith(
-            color: AppColors.tertiaryLabel,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: platformColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(
+              platformIcon,
+              color: platformColor,
+              size: 12,
+            ),
           ),
-        ),
-      ],
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              account.accountName,
+              style: AppTypography.caption1.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Text(
+            followersFormatted,
+            style: AppTypography.caption1.copyWith(
+              color: platformColor,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
