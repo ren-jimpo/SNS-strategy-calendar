@@ -132,7 +132,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       builder: (context, provider, child) {
         if (provider.isLoading) {
           return Scaffold(
-            backgroundColor: AppColors.systemGroupedBackground,
+            backgroundColor: AppColors.getBackgroundColor(context),
             body: const Center(
               child: CircularProgressIndicator(),
             ),
@@ -141,7 +141,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
         if (provider.error != null) {
           return Scaffold(
-            backgroundColor: AppColors.systemGroupedBackground,
+            backgroundColor: AppColors.getBackgroundColor(context),
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -154,13 +154,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   const SizedBox(height: 16),
                   Text(
                     'エラーが発生しました',
-                    style: AppTypography.headline,
+                    style: AppTypography.headline.copyWith(
+                      color: AppColors.getTextColor(context),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     provider.error!,
                     style: AppTypography.body.copyWith(
-                      color: AppColors.secondaryLabel,
+                      color: AppColors.getSecondaryTextColor(context),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -179,7 +181,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         final isWideScreen = screenWidth >= 768;
 
         return Scaffold(
-          backgroundColor: AppColors.systemGroupedBackground,
+          backgroundColor: AppColors.getBackgroundColor(context),
           body: SafeArea(
             child: isWideScreen
                 ? _buildWideScreenLayout()
@@ -205,11 +207,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 child: Container(
                   margin: const EdgeInsets.fromLTRB(16, 16, 8, 16),
                   decoration: BoxDecoration(
-                    color: AppColors.secondarySystemGroupedBackground,
+                    color: AppColors.getCardBackgroundColor(context),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.separator.withOpacity(0.1),
+                        color: AppColors.getSeparator(context).withOpacity(0.1),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
@@ -267,11 +269,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
           child: Container(
             margin: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.secondarySystemGroupedBackground,
+              color: AppColors.getCardBackgroundColor(context),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.separator.withOpacity(0.1),
+                  color: AppColors.getSeparator(context).withOpacity(0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
@@ -290,11 +292,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
           child: Container(
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             decoration: BoxDecoration(
-              color: AppColors.secondarySystemGroupedBackground,
+              color: AppColors.getCardBackgroundColor(context),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.separator.withOpacity(0.1),
+                  color: AppColors.getSeparator(context).withOpacity(0.1),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -587,12 +589,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     dateString,
                     style: AppTypography.title2.copyWith(
                       fontWeight: FontWeight.w700,
+                      color: AppColors.getTextColor(context),
                     ),
                   ),
                   Text(
                     '${_selectedDayPosts.length}件の投稿',
                     style: AppTypography.body.copyWith(
-                      color: AppColors.secondaryLabel,
+                      color: AppColors.getSecondaryTextColor(context),
                     ),
                   ),
                 ],
@@ -669,7 +672,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         Text(
           'アカウント:',
           style: AppTypography.caption1.copyWith(
-            color: AppColors.secondaryLabel,
+            color: AppColors.getSecondaryTextColor(context),
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -759,14 +762,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
             Text(
               '投稿がありません',
               style: AppTypography.headline.copyWith(
-                color: AppColors.secondaryLabel,
+                color: AppColors.getSecondaryTextColor(context),
               ),
             ),
             const SizedBox(height: 8),
             Text(
               '新しい投稿を追加してみましょう',
               style: AppTypography.footnote.copyWith(
-                color: AppColors.tertiaryLabel,
+                color: AppColors.getTertiaryTextColor(context),
               ),
             ),
           ],
@@ -966,7 +969,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           child: Text(
             label,
             style: AppTypography.caption1.copyWith(
-              color: AppColors.secondaryLabel,
+              color: AppColors.getSecondaryTextColor(context),
             ),
           ),
         ),

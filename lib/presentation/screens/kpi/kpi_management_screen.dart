@@ -88,7 +88,7 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
     final isWideScreen = MediaQuery.of(context).size.width >= 768;
     
     return Scaffold(
-      backgroundColor: AppColors.systemGroupedBackground,
+      backgroundColor: AppColors.getBackgroundColor(context),
       body: Consumer<KpiDataProvider>(
         builder: (context, kpiProvider, child) {
           if (_isLoading || kpiProvider.isLoading) {
@@ -112,13 +112,14 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
                     'エラーが発生しました',
                     style: AppTypography.title2.copyWith(
                       fontWeight: FontWeight.w600,
+                      color: AppColors.getTextColor(context),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     kpiProvider.error!,
                     style: AppTypography.body.copyWith(
-                      color: AppColors.secondaryLabel,
+                      color: AppColors.getSecondaryTextColor(context),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -372,22 +373,17 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.accentPurple.withOpacity(0.1),
-            AppColors.systemIndigo.withOpacity(0.05),
-          ],
-        ),
+        color: AppColors.getCardBackgroundColor(context),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppColors.accentPurple.withOpacity(0.2),
+          color: AppColors.getSeparator(context).withOpacity(0.2),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.accentPurple.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -505,14 +501,14 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
                   Text(
                     'KGIがありません',
                     style: AppTypography.headline.copyWith(
-                      color: AppColors.secondaryLabel,
+                      color: AppColors.getSecondaryTextColor(context),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     '戦略目標を設定して成果を測定しましょう',
                     style: AppTypography.body.copyWith(
-                      color: AppColors.tertiaryLabel,
+                      color: AppColors.getTertiaryTextColor(context),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -577,11 +573,11 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.systemBackground,
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.getCardBackgroundColor(context),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppColors.separator.withOpacity(0.2),
-          width: 1,
+          color: AppColors.getSeparator(context).withOpacity(0.2),
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
@@ -618,13 +614,14 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
                       kgi.name,
                       style: AppTypography.body.copyWith(
                         fontWeight: FontWeight.w600,
+                        color: AppColors.getTextColor(context),
                       ),
                     ),
                     if (kgi.description.isNotEmpty)
                       Text(
                         kgi.description,
                         style: AppTypography.caption1.copyWith(
-                          color: AppColors.secondaryLabel,
+                          color: AppColors.getSecondaryTextColor(context),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -970,7 +967,7 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
                           Text(
                             phase.description,
                             style: AppTypography.caption1.copyWith(
-                              color: AppColors.secondaryLabel,
+                              color: AppColors.getSecondaryTextColor(context),
                             ),
                           ),
                       ],
@@ -1277,7 +1274,7 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
                         Text(
                           targetPhase.description,
                           style: AppTypography.caption1.copyWith(
-                            color: AppColors.secondaryLabel,
+                            color: AppColors.getSecondaryTextColor(context),
                           ),
                         ),
                       ],
@@ -1378,7 +1375,7 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
                           Text(
                             '実行可能な成果測定指標',
                             style: AppTypography.caption1.copyWith(
-                              color: AppColors.secondaryLabel,
+                              color: AppColors.getSecondaryTextColor(context),
                             ),
                           ),
                         ],
@@ -1442,14 +1439,14 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
                       Text(
                         'KPIがありません',
                         style: AppTypography.headline.copyWith(
-                          color: AppColors.secondaryLabel,
+                          color: AppColors.getSecondaryTextColor(context),
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         '重要指標を設定して進捗を追跡しましょう',
                         style: AppTypography.body.copyWith(
-                          color: AppColors.tertiaryLabel,
+                          color: AppColors.getTertiaryTextColor(context),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -1515,11 +1512,11 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.systemBackground,
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.getCardBackgroundColor(context),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppColors.separator.withOpacity(0.2),
-          width: 1,
+          color: AppColors.getSeparator(context).withOpacity(0.2),
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
@@ -1556,13 +1553,14 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
                       kpi.name,
                       style: AppTypography.body.copyWith(
                         fontWeight: FontWeight.w600,
+                        color: AppColors.getTextColor(context),
                       ),
                     ),
                     if (kpi.description.isNotEmpty)
                       Text(
                         kpi.description,
                         style: AppTypography.caption1.copyWith(
-                          color: AppColors.secondaryLabel,
+                          color: AppColors.getSecondaryTextColor(context),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -2272,10 +2270,10 @@ class _KpiManagementScreenState extends State<KpiManagementScreen> with TickerPr
   }
 
   void _showProgressEditDialog(KpiModel kpi) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.5),
       builder: (context) => KpiProgressEditModal(kpi: kpi),
     ).then((result) {
       if (result == true) {

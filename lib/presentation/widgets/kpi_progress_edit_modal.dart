@@ -149,9 +149,9 @@ class _KpiProgressEditModalState extends State<KpiProgressEditModal> with Ticker
   double _calculateProgress(double currentValue) {
     if (widget.kpi.targetValue <= 0) {
       // 目標値が0以下の場合は、現在値をそのまま表示する簡易計算
-      return currentValue.clamp(0, 150);
+      return currentValue.clamp(0, 100);
     }
-    return ((currentValue / widget.kpi.targetValue) * 100).clamp(0, 150);
+    return ((currentValue / widget.kpi.targetValue) * 100).clamp(0, 100);
   }
 
   // スライダーの最大値を計算（目標値が0以下の場合の対応）
@@ -159,7 +159,7 @@ class _KpiProgressEditModalState extends State<KpiProgressEditModal> with Ticker
     if (widget.kpi.targetValue <= 0) {
       return 100000.0; // デフォルトの最大値
     }
-    return widget.kpi.targetValue * 1.5;
+    return widget.kpi.targetValue; // 100%まで
   }
 
   // 目標値が有効かどうかを判定
@@ -169,18 +169,33 @@ class _KpiProgressEditModalState extends State<KpiProgressEditModal> with Ticker
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.5,
-      decoration: const BoxDecoration(
-        color: AppColors.systemGroupedBackground,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        children: [
-          _buildHeader(),
-          Expanded(child: _buildContent()),
-          _buildActionButtons(),
-        ],
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(20),
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+          maxWidth: 500,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.systemGroupedBackground,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildHeader(),
+            Flexible(child: _buildContent()),
+            _buildActionButtons(),
+          ],
+        ),
       ),
     );
   }
@@ -190,7 +205,10 @@ class _KpiProgressEditModalState extends State<KpiProgressEditModal> with Ticker
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.systemBackground,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
         border: Border(
           bottom: BorderSide(
             color: AppColors.separator.withOpacity(0.3),
@@ -254,318 +272,314 @@ class _KpiProgressEditModalState extends State<KpiProgressEditModal> with Ticker
   }
 
   Widget _buildContent() {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 現在の進捗表示（アニメーション付き）
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.systemBackground,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppColors.separator.withOpacity(0.3),
-                width: 1,
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 現在の進捗表示（アニメーション付き）
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.systemBackground,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.separator.withOpacity(0.3),
+                  width: 1,
+                ),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '進捗状況',
-                  style: AppTypography.caption1.copyWith(
-                    color: AppColors.secondaryLabel,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    AnimatedBuilder(
-                      animation: _colorAnimation,
-                      builder: (context, child) {
-                        return Text(
-                          '${_currentProgress.toStringAsFixed(1)}%',
-                          style: AppTypography.title1.copyWith(
-                            color: _colorAnimation.value ?? _getProgressColor(_currentProgress),
-                            fontWeight: FontWeight.w700,
-                          ),
-                        );
-                      },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '進捗状況',
+                    style: AppTypography.caption1.copyWith(
+                      color: AppColors.secondaryLabel,
+                      fontWeight: FontWeight.w600,
                     ),
-                    const Spacer(),
-                    Text(
-                      _isTargetValueValid 
-                        ? '目標: ${widget.kpi.targetValue.toStringAsFixed(1)}${widget.kpi.unit}'
-                        : '目標値が設定されていません',
-                      style: AppTypography.caption1.copyWith(
-                        color: _isTargetValueValid 
-                          ? AppColors.tertiaryLabel 
-                          : AppColors.systemRed,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // アニメーション付き進捗バー
-                Container(
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: AppColors.systemGray5,
-                    borderRadius: BorderRadius.circular(4),
                   ),
-                  child: AnimatedBuilder(
-                    animation: _progressAnimation,
-                    builder: (context, child) {
-                      return AnimatedBuilder(
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      AnimatedBuilder(
                         animation: _colorAnimation,
                         builder: (context, child) {
-                          return LinearProgressIndicator(
-                            value: _progressAnimation.value.clamp(0.0, 1.0),
-                            backgroundColor: Colors.transparent,
-                            valueColor: AlwaysStoppedAnimation(
-                              _colorAnimation.value ?? _getProgressColor(_currentProgress),
+                          return Text(
+                            '${_currentProgress.toStringAsFixed(1)}%',
+                            style: AppTypography.title1.copyWith(
+                              color: _colorAnimation.value ?? _getProgressColor(_currentProgress),
+                              fontWeight: FontWeight.w700,
                             ),
                           );
                         },
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // 進捗ラベル
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '0%',
-                      style: AppTypography.caption2.copyWith(
-                        color: AppColors.tertiaryLabel,
                       ),
-                    ),
-                    Text(
-                      '100%',
-                      style: AppTypography.caption2.copyWith(
-                        color: AppColors.tertiaryLabel,
-                      ),
-                    ),
-                    if (_currentProgress > 100)
+                      const Spacer(),
                       Text(
-                        '150%+',
-                        style: AppTypography.caption2.copyWith(
-                          color: AppColors.systemPurple,
-                          fontWeight: FontWeight.w600,
+                        _isTargetValueValid 
+                          ? '目標: ${widget.kpi.targetValue.toStringAsFixed(1)}${widget.kpi.unit}'
+                          : '目標値が設定されていません',
+                        style: AppTypography.caption1.copyWith(
+                          color: _isTargetValueValid 
+                            ? AppColors.tertiaryLabel 
+                            : AppColors.systemRed,
                         ),
                       ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // インタラクティブスライダー
-          Text(
-            '達成値を調整',
-            style: AppTypography.headline.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.systemBackground,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppColors.separator.withOpacity(0.3),
-                width: 1,
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // アニメーション付き進捗バー
+                  Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: AppColors.systemGray5,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: AnimatedBuilder(
+                      animation: _progressAnimation,
+                      builder: (context, child) {
+                        return AnimatedBuilder(
+                          animation: _colorAnimation,
+                          builder: (context, child) {
+                            return LinearProgressIndicator(
+                              value: _progressAnimation.value.clamp(0.0, 1.0),
+                              backgroundColor: Colors.transparent,
+                              valueColor: AlwaysStoppedAnimation(
+                                _colorAnimation.value ?? _getProgressColor(_currentProgress),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // 進捗ラベル
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '0%',
+                        style: AppTypography.caption2.copyWith(
+                          color: AppColors.tertiaryLabel,
+                        ),
+                      ),
+                      Text(
+                        '100%',
+                        style: AppTypography.caption2.copyWith(
+                          color: AppColors.tertiaryLabel,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            child: Column(
-              children: [
-                // スライダー
-                Row(
-                  children: [
-                    Text(
-                      '0',
-                      style: AppTypography.caption1.copyWith(
-                        color: AppColors.tertiaryLabel,
-                      ),
-                    ),
-                    Expanded(
-                      child: SliderTheme(
-                        data: SliderTheme.of(context).copyWith(
-                          trackHeight: 6,
-                          thumbShape: const RoundSliderThumbShape(
-                            enabledThumbRadius: 12,
-                          ),
-                          overlayShape: const RoundSliderOverlayShape(
-                            overlayRadius: 20,
-                          ),
-                          activeTrackColor: _getProgressColor(_currentProgress),
-                          inactiveTrackColor: AppColors.systemGray5,
-                          thumbColor: _getProgressColor(_currentProgress),
-                          overlayColor: _getProgressColor(_currentProgress).withOpacity(0.2),
-                        ),
-                        child: Slider(
-                          value: _sliderValue.clamp(0, _sliderMaxValue),
-                          min: 0,
-                          max: _sliderMaxValue,
-                          onChanged: _onSliderChanged,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '${_sliderMaxValue.toStringAsFixed(0)}',
-                      style: AppTypography.caption1.copyWith(
-                        color: AppColors.tertiaryLabel,
-                      ),
-                    ),
-                  ],
+            
+            const SizedBox(height: 24),
+            
+            // インタラクティブスライダー（目標値が有効な場合のみ）
+            Text(
+              '達成値を調整',
+              style: AppTypography.headline.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.systemBackground,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.separator.withOpacity(0.3),
+                  width: 1,
                 ),
-                const SizedBox(height: 16),
-                
-                // 数値入力フィールド
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.systemGray6.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.separator.withOpacity(0.3),
-                            width: 1,
+              ),
+              child: Column(
+                children: [
+                  // スライダー（目標値が有効な場合のみ表示）
+                  if (_isTargetValueValid) ...[
+                    Row(
+                      children: [
+                        Text(
+                          '0',
+                          style: AppTypography.caption1.copyWith(
+                            color: AppColors.tertiaryLabel,
                           ),
                         ),
-                        child: TextField(
-                          controller: _currentValueController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          style: AppTypography.body,
-                          textAlign: TextAlign.center,
-                          decoration: InputDecoration(
-                            labelText: '現在値',
-                            suffix: Text(
-                              widget.kpi.unit,
-                              style: AppTypography.body.copyWith(
+                        Expanded(
+                          child: SliderTheme(
+                            data: SliderTheme.of(context).copyWith(
+                              trackHeight: 6,
+                              thumbShape: const RoundSliderThumbShape(
+                                enabledThumbRadius: 12,
+                              ),
+                              overlayShape: const RoundSliderOverlayShape(
+                                overlayRadius: 20,
+                              ),
+                              activeTrackColor: _getProgressColor(_currentProgress),
+                              inactiveTrackColor: AppColors.systemGray5,
+                              thumbColor: _getProgressColor(_currentProgress),
+                              overlayColor: _getProgressColor(_currentProgress).withOpacity(0.2),
+                            ),
+                            child: Slider(
+                              value: _sliderValue.clamp(0, _sliderMaxValue),
+                              min: 0,
+                              max: _sliderMaxValue,
+                              onChanged: _onSliderChanged,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '${_sliderMaxValue.toStringAsFixed(0)}',
+                          style: AppTypography.caption1.copyWith(
+                            color: AppColors.tertiaryLabel,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  
+                  // 数値入力フィールド
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.systemGray6.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.separator.withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: TextField(
+                            controller: _currentValueController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            style: AppTypography.body,
+                            textAlign: TextAlign.center,
+                            decoration: InputDecoration(
+                              labelText: '現在値',
+                              suffix: Text(
+                                widget.kpi.unit,
+                                style: AppTypography.body.copyWith(
+                                  color: AppColors.secondaryLabel,
+                                ),
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.all(16),
+                              labelStyle: AppTypography.body.copyWith(
                                 color: AppColors.secondaryLabel,
                               ),
                             ),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.all(16),
-                            labelStyle: AppTypography.body.copyWith(
-                              color: AppColors.secondaryLabel,
-                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    // クイック設定ボタン
-                    Column(
-                      children: [
-                        if (_isTargetValueValid) ...[
-                          _buildQuickSetButton('25%', widget.kpi.targetValue * 0.25),
-                          const SizedBox(height: 4),
-                          _buildQuickSetButton('50%', widget.kpi.targetValue * 0.5),
-                          const SizedBox(height: 4),
-                          _buildQuickSetButton('100%', widget.kpi.targetValue),
-                        ] else ...[
-                          _buildQuickSetButton('1K', 1000),
-                          const SizedBox(height: 4),
-                          _buildQuickSetButton('5K', 5000),
-                          const SizedBox(height: 4),
-                          _buildQuickSetButton('10K', 10000),
+                      const SizedBox(width: 12),
+                      // クイック設定ボタン
+                      Column(
+                        children: [
+                          if (_isTargetValueValid) ...[
+                            _buildQuickSetButton('25%', widget.kpi.targetValue * 0.25),
+                            const SizedBox(height: 4),
+                            _buildQuickSetButton('50%', widget.kpi.targetValue * 0.5),
+                            const SizedBox(height: 4),
+                            _buildQuickSetButton('100%', widget.kpi.targetValue),
+                          ] else ...[
+                            _buildQuickSetButton('1K', 1000),
+                            const SizedBox(height: 4),
+                            _buildQuickSetButton('5K', 5000),
+                            const SizedBox(height: 4),
+                            _buildQuickSetButton('10K', 10000),
+                          ],
                         ],
-                      ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // 目標値無効時の警告メッセージ
+            if (!_isTargetValueValid) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.systemOrange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.systemOrange.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      CupertinoIcons.exclamationmark_triangle_fill,
+                      color: AppColors.systemOrange,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'このKGIの目標値が設定されていません。編集画面で目標値を設定してください。',
+                        style: AppTypography.caption1.copyWith(
+                          color: AppColors.systemOrange,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // 目標値無効時の警告メッセージ
-          if (!_isTargetValueValid) ...[
+              ),
+              const SizedBox(height: 16),
+            ],
+            
+            // リアルタイムフィードバック
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.systemOrange.withOpacity(0.1),
+                color: _getProgressColor(_currentProgress).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: AppColors.systemOrange.withOpacity(0.3),
+                  color: _getProgressColor(_currentProgress).withOpacity(0.3),
                   width: 1,
                 ),
               ),
               child: Row(
                 children: [
                   Icon(
-                    CupertinoIcons.exclamationmark_triangle_fill,
-                    color: AppColors.systemOrange,
+                    _getProgressIcon(_currentProgress),
+                    color: _getProgressColor(_currentProgress),
                     size: 16,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'このKGIの目標値が設定されていません。編集画面で目標値を設定してください。',
+                      _getProgressMessage(_currentProgress),
                       style: AppTypography.caption1.copyWith(
-                        color: AppColors.systemOrange,
+                        color: _getProgressColor(_currentProgress),
                         fontWeight: FontWeight.w600,
                       ),
+                    ),
+                  ),
+                  Text(
+                    '${_sliderValue.toStringAsFixed(1)}${widget.kpi.unit}',
+                    style: AppTypography.caption1.copyWith(
+                      color: _getProgressColor(_currentProgress),
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
           ],
-          
-          // リアルタイムフィードバック
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: _getProgressColor(_currentProgress).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: _getProgressColor(_currentProgress).withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  _getProgressIcon(_currentProgress),
-                  color: _getProgressColor(_currentProgress),
-                  size: 16,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _getProgressMessage(_currentProgress),
-                    style: AppTypography.caption1.copyWith(
-                      color: _getProgressColor(_currentProgress),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                Text(
-                  '${_sliderValue.toStringAsFixed(1)}${widget.kpi.unit}',
-                  style: AppTypography.caption1.copyWith(
-                    color: _getProgressColor(_currentProgress),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -575,6 +589,10 @@ class _KpiProgressEditModalState extends State<KpiProgressEditModal> with Ticker
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.systemBackground,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
         border: Border(
           top: BorderSide(
             color: AppColors.separator.withOpacity(0.3),
@@ -582,47 +600,45 @@ class _KpiProgressEditModalState extends State<KpiProgressEditModal> with Ticker
           ),
         ),
       ),
-      child: SafeArea(
-        child: Row(
-          children: [
-            Expanded(
-              child: CupertinoButton(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                color: AppColors.systemGray4,
-                borderRadius: BorderRadius.circular(12),
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(
-                  'キャンセル',
-                  style: AppTypography.body.copyWith(
-                    color: AppColors.label,
-                    fontWeight: FontWeight.w600,
-                  ),
+      child: Row(
+        children: [
+          Expanded(
+            child: CupertinoButton(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              color: AppColors.systemGray4,
+              borderRadius: BorderRadius.circular(12),
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'キャンセル',
+                style: AppTypography.body.copyWith(
+                  color: AppColors.label,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 2,
-              child: CupertinoButton(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                color: widget.kpi.type == KpiType.kgi 
-                  ? AppColors.accentPurple 
-                  : AppColors.systemBlue,
-                borderRadius: BorderRadius.circular(12),
-                onPressed: _isLoading ? null : _saveProgress,
-                child: _isLoading
-                  ? const CupertinoActivityIndicator(color: Colors.white)
-                  : Text(
-                      '達成度を更新',
-                      style: AppTypography.body.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 2,
+            child: CupertinoButton(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              color: widget.kpi.type == KpiType.kgi 
+                ? AppColors.accentPurple 
+                : AppColors.systemBlue,
+              borderRadius: BorderRadius.circular(12),
+              onPressed: _isLoading ? null : _saveProgress,
+              child: _isLoading
+                ? const CupertinoActivityIndicator(color: Colors.white)
+                : Text(
+                    '達成度を更新',
+                    style: AppTypography.body.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
                     ),
-              ),
+                  ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

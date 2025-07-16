@@ -201,6 +201,61 @@ class AppTheme {
       elevation: 0,
     ),
 
+    // ElevatedButtonテーマ（ダーク）
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        textStyle: AppTypography.button,
+      ),
+    ),
+
+    // TextButtonテーマ（ダーク）
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: AppColors.primary,
+        textStyle: AppTypography.button,
+      ),
+    ),
+
+    // OutlinedButtonテーマ（ダーク）
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.primary,
+        side: const BorderSide(color: AppColors.primary),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        textStyle: AppTypography.button,
+      ),
+    ),
+
+    // InputDecorationテーマ（ダーク）
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: AppColors.tertiarySystemBackgroundDark,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.systemGray4),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.systemGray4),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.primary),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      hintStyle: AppTypography.body.copyWith(color: AppColors.tertiaryLabelDark),
+    ),
+
     // CardTheme（ダーク）
     cardTheme: const CardThemeData(
       color: AppColors.secondarySystemGroupedBackgroundDark,

@@ -187,4 +187,104 @@ class AppColors {
         return systemGray;
     }
   }
+
+  // === Dark Mode Helper Methods ===
+  /// ダークモードに応じたラベル色を取得
+  static Color getLabelColor(bool isDarkMode) {
+    return isDarkMode ? labelDark : label;
+  }
+
+  static Color getSecondaryLabelColor(bool isDarkMode) {
+    return isDarkMode ? secondaryLabelDark : secondaryLabel;
+  }
+
+  static Color getTertiaryLabelColor(bool isDarkMode) {
+    return isDarkMode ? tertiaryLabelDark : tertiaryLabel;
+  }
+
+  static Color getQuaternaryLabelColor(bool isDarkMode) {
+    return isDarkMode ? quaternaryLabelDark : quaternaryLabel;
+  }
+
+  /// ダークモードに応じた背景色を取得
+  static Color getSystemBackground(bool isDarkMode) {
+    return isDarkMode ? systemBackgroundDark : systemBackground;
+  }
+
+  static Color getSecondarySystemBackground(bool isDarkMode) {
+    return isDarkMode ? secondarySystemBackgroundDark : secondarySystemBackground;
+  }
+
+  static Color getTertiarySystemBackground(bool isDarkMode) {
+    return isDarkMode ? tertiarySystemBackgroundDark : tertiarySystemBackground;
+  }
+
+  /// ダークモードに応じたグループ化背景色を取得
+  static Color getSystemGroupedBackground(bool isDarkMode) {
+    return isDarkMode ? systemGroupedBackgroundDark : systemGroupedBackground;
+  }
+
+  static Color getSecondarySystemGroupedBackground(bool isDarkMode) {
+    return isDarkMode ? secondarySystemGroupedBackgroundDark : secondarySystemGroupedBackground;
+  }
+
+  static Color getTertiarySystemGroupedBackground(bool isDarkMode) {
+    return isDarkMode ? tertiarySystemGroupedBackgroundDark : tertiarySystemGroupedBackground;
+  }
+
+  /// ダークモードに応じた区切り線色を取得
+  static Color getSeparatorColor(bool isDarkMode) {
+    return isDarkMode ? separatorDark : separator;
+  }
+
+  static Color getOpaqueSeparatorColor(bool isDarkMode) {
+    return isDarkMode ? opaqueSeparatorDark : opaqueSeparator;
+  }
+
+  /// ダークモードに応じたフィル色を取得
+  static Color getSystemFillColor(bool isDarkMode) {
+    return isDarkMode ? systemFillDark : systemFill;
+  }
+
+  static Color getSecondarySystemFillColor(bool isDarkMode) {
+    return isDarkMode ? secondarySystemFillDark : secondarySystemFill;
+  }
+
+  static Color getTertiarySystemFillColor(bool isDarkMode) {
+    return isDarkMode ? tertiarySystemFillDark : tertiarySystemFill;
+  }
+
+  static Color getQuaternarySystemFillColor(bool isDarkMode) {
+    return isDarkMode ? quaternarySystemFillDark : quaternarySystemFill;
+  }
+
+  // === Context-based Helper Methods ===
+  /// Contextベースのヘルパーメソッド（自動的にダークモードを検出）
+  static Color getTextColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark ? labelDark : label;
+  }
+  
+  static Color getSecondaryTextColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark ? secondaryLabelDark : secondaryLabel;
+  }
+  
+  static Color getTertiaryTextColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark ? tertiaryLabelDark : tertiaryLabel;
+  }
+  
+  static Color getBackgroundColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark ? systemGroupedBackgroundDark : systemGroupedBackground;
+  }
+  
+  static Color getCardBackgroundColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark ? secondarySystemGroupedBackgroundDark : secondarySystemGroupedBackground;
+  }
+  
+  static Color getSystemBackgroundColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark ? systemBackgroundDark : systemBackground;
+  }
+  
+  static Color getSeparator(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark ? separatorDark : separator;
+  }
 } 

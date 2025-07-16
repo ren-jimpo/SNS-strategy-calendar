@@ -107,6 +107,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
+      backgroundColor: AppColors.getBackgroundColor(context),
       drawer: _buildDrawer(),
       body: Row(
         children: [
@@ -127,7 +128,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
   Widget _buildDrawer() {
     return Drawer(
-      backgroundColor: AppColors.secondarySystemGroupedBackground,
+      backgroundColor: AppColors.getCardBackgroundColor(context),
       child: _buildSidebarContent(),
     );
   }
@@ -140,13 +141,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            AppColors.secondarySystemGroupedBackground,
-            AppColors.systemGroupedBackground,
+            AppColors.getCardBackgroundColor(context),
+            AppColors.getBackgroundColor(context),
           ],
         ),
         border: Border(
           right: BorderSide(
-            color: AppColors.separator.withOpacity(0.3),
+            color: AppColors.getSeparator(context).withOpacity(0.3),
             width: 0.5,
           ),
         ),
@@ -235,7 +236,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           Text(
             '効率的な投稿管理',
             style: AppTypography.caption1.copyWith(
-              color: AppColors.secondaryLabel,
+              color: AppColors.getSecondaryTextColor(context),
             ),
           ),
           const SizedBox(height: 8),
@@ -376,7 +377,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                       Text(
                         'アカウントがありません',
                         style: AppTypography.caption1.copyWith(
-                          color: AppColors.secondaryLabel,
+                          color: AppColors.getSecondaryTextColor(context),
                         ),
                       ),
                     ],
@@ -428,10 +429,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.systemBackground.withOpacity(0.8),
+        color: AppColors.getSystemBackgroundColor(context).withOpacity(0.8),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppColors.separator.withOpacity(0.3),
+          color: AppColors.getSeparator(context).withOpacity(0.3),
           width: 0.5,
         ),
       ),
@@ -452,10 +453,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
+            child:             Text(
               account.accountName,
               style: AppTypography.caption1.copyWith(
                 fontWeight: FontWeight.w600,
+                color: AppColors.getTextColor(context),
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -543,7 +545,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         Text(
                           item.label,
                           style: AppTypography.body.copyWith(
-                            color: isSelected ? item.color : AppColors.label,
+                            color: isSelected ? item.color : AppColors.getTextColor(context),
                             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                           ),
                         ),
@@ -551,7 +553,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         Text(
                           item.subtitle,
                           style: AppTypography.caption1.copyWith(
-                            color: AppColors.tertiaryLabel,
+                            color: AppColors.getTertiaryTextColor(context),
                           ),
                         ),
                       ],
@@ -583,7 +585,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       child: Column(
         children: [
           Divider(
-            color: AppColors.separator.withOpacity(0.5),
+            color: AppColors.getSeparator(context).withOpacity(0.5),
             height: 1,
           ),
           const SizedBox(height: 16),
@@ -621,6 +623,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                       'ユーザー名',
                       style: AppTypography.subhead.copyWith(
                         fontWeight: FontWeight.w600,
+                        color: AppColors.getTextColor(context),
                       ),
                     ),
                     Row(

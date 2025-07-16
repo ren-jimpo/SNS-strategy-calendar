@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/theme_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -14,41 +16,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _pushNotifications = true;
   bool _dataReminders = true;
   bool _weeklyReports = false;
-  bool _darkMode = false;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.systemGroupedBackground,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: ListView(
-                children: [
-                  _buildProfileSection(),
-                  const SizedBox(height: 20),
-                  _buildNotificationSection(),
-                  const SizedBox(height: 20),
-                  _buildPreferencesSection(),
-                  const SizedBox(height: 20),
-                  _buildDataSection(),
-                  const SizedBox(height: 20),
-                  _buildSupportSection(),
-                  const SizedBox(height: 20),
-                  _buildAboutSection(),
-                  const SizedBox(height: 40),
-                ],
-              ),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return Scaffold(
+          backgroundColor: AppColors.getSystemGroupedBackground(themeProvider.isDarkMode),
+          body: SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(themeProvider.isDarkMode),
+                Expanded(
+                  child: ListView(
+                    children: [
+                      _buildProfileSection(themeProvider.isDarkMode),
+                      const SizedBox(height: 20),
+                      _buildNotificationSection(themeProvider.isDarkMode),
+                      const SizedBox(height: 20),
+                      _buildPreferencesSection(themeProvider),
+                      const SizedBox(height: 20),
+                      _buildDataSection(themeProvider.isDarkMode),
+                      const SizedBox(height: 20),
+                      _buildSupportSection(themeProvider.isDarkMode),
+                      const SizedBox(height: 20),
+                      _buildAboutSection(themeProvider.isDarkMode),
+                      const SizedBox(height: 40),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isDarkMode) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       padding: const EdgeInsets.all(20),
@@ -68,7 +73,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.separator.withOpacity(0.1),
+            color: AppColors.getSeparatorColor(isDarkMode).withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -115,7 +120,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Text(
                   'アプリ設定・管理',
                   style: AppTypography.body.copyWith(
-                    color: AppColors.secondaryLabel,
+                    color: AppColors.getSecondaryLabelColor(isDarkMode),
                   ),
                 ),
               ],
@@ -126,12 +131,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildProfileSection() {
+  Widget _buildProfileSection(bool isDarkMode) {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.secondarySystemGroupedBackground,
+        color: AppColors.getSecondarySystemGroupedBackground(isDarkMode),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -154,13 +159,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   'ユーザー名',
                   style: AppTypography.headline.copyWith(
                     fontWeight: FontWeight.w600,
+                    color: AppColors.getLabelColor(isDarkMode),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'user@example.com',
                   style: AppTypography.footnote.copyWith(
-                    color: AppColors.secondaryLabel,
+                    color: AppColors.getSecondaryLabelColor(isDarkMode),
                   ),
                 ),
               ],
@@ -176,77 +182,89 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildNotificationSection() {
+  Widget _buildNotificationSection(bool isDarkMode) {
     return _buildSettingsSection(
       title: '通知設定',
       icon: CupertinoIcons.bell,
+      isDarkMode: isDarkMode,
       children: [
         _buildSwitchTile(
           '投稿リマインダー',
           'スケジュール投稿の通知を受け取る',
           _pushNotifications,
           (value) => setState(() => _pushNotifications = value),
+          isDarkMode,
         ),
         _buildSwitchTile(
           'データ入力リマインダー',
           '投稿後のデータ入力時期を通知',
           _dataReminders,
           (value) => setState(() => _dataReminders = value),
+          isDarkMode,
         ),
         _buildSwitchTile(
           '週次レポート',
           '毎週月曜日にパフォーマンスレポートを送信',
           _weeklyReports,
           (value) => setState(() => _weeklyReports = value),
+          isDarkMode,
         ),
       ],
     );
   }
 
-  Widget _buildPreferencesSection() {
+  Widget _buildPreferencesSection(ThemeProvider themeProvider) {
     return _buildSettingsSection(
       title: '表示設定',
       icon: CupertinoIcons.settings,
+      isDarkMode: themeProvider.isDarkMode,
       children: [
         _buildSwitchTile(
           'ダークモード',
           '暗いテーマを使用する',
-          _darkMode,
-          (value) => setState(() => _darkMode = value),
+          themeProvider.isDarkMode,
+          (value) => themeProvider.setTheme(value),
+          themeProvider.isDarkMode,
         ),
         _buildNavigationTile(
           'カレンダー形式',
           '月表示',
           () => _showCalendarFormatDialog(),
+          isDarkMode: themeProvider.isDarkMode,
         ),
         _buildNavigationTile(
           'デフォルトKPI目標',
           'いいね数: 100, インプレッション: 2000',
           () => _showDefaultKPIDialog(),
+          isDarkMode: themeProvider.isDarkMode,
         ),
       ],
     );
   }
 
-  Widget _buildDataSection() {
+  Widget _buildDataSection(bool isDarkMode) {
     return _buildSettingsSection(
       title: 'データ管理',
       icon: CupertinoIcons.folder,
+      isDarkMode: isDarkMode,
       children: [
         _buildNavigationTile(
           'データエクスポート',
           'CSVまたはPDFで出力',
           () => _showExportDialog(),
+          isDarkMode: isDarkMode,
         ),
         _buildNavigationTile(
           'データインポート',
           '既存データをインポート',
           () => _showImportDialog(),
+          isDarkMode: isDarkMode,
         ),
         _buildNavigationTile(
           'データバックアップ',
           'クラウドに自動バックアップ',
           () => _showBackupDialog(),
+          isDarkMode: isDarkMode,
           trailing: Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
@@ -266,54 +284,63 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSupportSection() {
+  Widget _buildSupportSection(bool isDarkMode) {
     return _buildSettingsSection(
       title: 'サポート',
       icon: CupertinoIcons.question_circle,
+      isDarkMode: isDarkMode,
       children: [
         _buildNavigationTile(
           'ヘルプ・使い方',
           'アプリの使用方法を確認',
           () => _showHelpDialog(),
+          isDarkMode: isDarkMode,
         ),
         _buildNavigationTile(
           'フィードバック',
           'ご意見・ご要望をお聞かせください',
           () => _showFeedbackDialog(),
+          isDarkMode: isDarkMode,
         ),
         _buildNavigationTile(
           'お問い合わせ',
           'サポートチームに連絡',
           () => _showContactDialog(),
+          isDarkMode: isDarkMode,
         ),
       ],
     );
   }
 
-  Widget _buildAboutSection() {
+  Widget _buildAboutSection(bool isDarkMode) {
     return _buildSettingsSection(
       title: 'アプリについて',
       icon: CupertinoIcons.info_circle,
+      isDarkMode: isDarkMode,
       children: [
         _buildNavigationTile(
           'バージョン',
           '1.0.0',
           null,
+          isDarkMode: isDarkMode,
         ),
         _buildNavigationTile(
           'プライバシーポリシー',
           '個人情報の取り扱いについて',
           () => _showPrivacyDialog(),
+          isDarkMode: isDarkMode,
         ),
         _buildNavigationTile(
           '利用規約',
           'サービス利用規約',
           () => _showTermsDialog(),
+          isDarkMode: isDarkMode,
         ),
         _buildNavigationTile(
           'ライセンス',
           'オープンソースライセンス',
           () => _showLicenseDialog(),
+          isDarkMode: isDarkMode,
         ),
       ],
     );
@@ -322,12 +349,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildSettingsSection({
     required String title,
     required IconData icon,
+    required bool isDarkMode,
     required List<Widget> children,
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: AppColors.secondarySystemGroupedBackground,
+        color: AppColors.getSecondarySystemGroupedBackground(isDarkMode),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -344,7 +372,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(width: 8),
                 Text(
                   title,
-                  style: AppTypography.headline,
+                  style: AppTypography.headline.copyWith(
+                    color: AppColors.getLabelColor(isDarkMode),
+                  ),
                 ),
               ],
             ),
@@ -360,6 +390,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     String subtitle,
     bool value,
     Function(bool) onChanged,
+    bool isDarkMode,
   ) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -371,13 +402,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Text(
                   title,
-                  style: AppTypography.body,
+                  style: AppTypography.body.copyWith(
+                    color: AppColors.getLabelColor(isDarkMode),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
                   style: AppTypography.footnote.copyWith(
-                    color: AppColors.secondaryLabel,
+                    color: AppColors.getSecondaryLabelColor(isDarkMode),
                   ),
                 ),
               ],
@@ -398,6 +431,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     String subtitle,
     VoidCallback? onTap, {
     Widget? trailing,
+    required bool isDarkMode,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -415,14 +449,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Text(
                       title,
                       style: AppTypography.body.copyWith(
-                        color: onTap != null ? AppColors.label : AppColors.secondaryLabel,
+                        color: onTap != null 
+                          ? AppColors.getLabelColor(isDarkMode)
+                          : AppColors.getSecondaryLabelColor(isDarkMode),
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
                       style: AppTypography.footnote.copyWith(
-                        color: AppColors.secondaryLabel,
+                        color: AppColors.getSecondaryLabelColor(isDarkMode),
                       ),
                     ),
                   ],

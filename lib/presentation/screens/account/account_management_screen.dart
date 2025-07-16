@@ -89,7 +89,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.systemGroupedBackground,
+      backgroundColor: AppColors.getBackgroundColor(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -170,7 +170,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                 Text(
                   'SNSアカウントの管理と統計',
                   style: AppTypography.body.copyWith(
-                    color: AppColors.secondaryLabel,
+                    color: AppColors.getSecondaryTextColor(context),
                   ),
                 ),
               ],
@@ -255,7 +255,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
           Text(
             'アカウントがありません',
             style: AppTypography.title2.copyWith(
-              color: AppColors.label,
+              color: AppColors.getTextColor(context),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -263,7 +263,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
           Text(
             'SNSアカウントを追加して\n投稿管理を始めましょう',
             style: AppTypography.body.copyWith(
-              color: AppColors.secondaryLabel,
+              color: AppColors.getSecondaryTextColor(context),
             ),
             textAlign: TextAlign.center,
           ),
@@ -410,6 +410,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
               'アカウント一覧',
               style: AppTypography.title3.copyWith(
                 fontWeight: FontWeight.w600,
+                color: AppColors.getTextColor(context),
               ),
             ),
             const Spacer(),
@@ -438,17 +439,17 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.secondarySystemGroupedBackground,
+        color: AppColors.getCardBackgroundColor(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _selectedAccount?.id == account.id 
               ? _getPlatformColor(account.platform).withOpacity(0.5)
-              : AppColors.separator.withOpacity(0.3),
+              : AppColors.getSeparator(context).withOpacity(0.3),
           width: _selectedAccount?.id == account.id ? 2 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.separator.withOpacity(0.1),
+            color: AppColors.getSeparator(context).withOpacity(0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -488,6 +489,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                       account.accountName,
                       style: AppTypography.title3.copyWith(
                         fontWeight: FontWeight.w600,
+                        color: AppColors.getTextColor(context),
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -495,7 +497,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                     Text(
                       '@${account.accountName}',
                       style: AppTypography.body.copyWith(
-                        color: AppColors.secondaryLabel,
+                        color: AppColors.getSecondaryTextColor(context),
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -520,7 +522,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
               PopupMenuButton<String>(
                 icon: Icon(
                   CupertinoIcons.ellipsis_circle,
-                  color: AppColors.secondaryLabel,
+                  color: AppColors.getSecondaryTextColor(context),
                 ),
                 onSelected: (value) {
                   switch (value) {
@@ -623,7 +625,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
           Text(
             label,
             style: AppTypography.caption2.copyWith(
-              color: AppColors.secondaryLabel,
+              color: AppColors.getSecondaryTextColor(context),
             ),
           ),
         ],
